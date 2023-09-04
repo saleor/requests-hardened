@@ -48,7 +48,7 @@ jobs:
 
   publish:
     runs-on: ubuntu-22.04
-    # environment: pypi  # TODO: needs paid plan
+    environment: publish-pypi
 
     needs:
       - build_sdist
