@@ -1,0 +1,45 @@
+name: Tests
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    permissions:
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.8"
+          - "3.9"
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "pypy3.9"
+          - "pypy3.10"
+        os:
+          - macos-11
+          - windows-latest
+          - ubuntu-22.04
+
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} @ ${{ matrix.python-version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+      - name: Setup Python
+        uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # v4.7.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
+
+      - name: Install Dependencies
+        # We cannot use --require-hashes here as we are using different Python versions.
+        run: python -m pip install -r requirements_dev.txt
+
+      - name: Run Tests
+        run: pytest tests/

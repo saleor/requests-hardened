@@ -1,0 +1,73 @@
+name: Publish to PyPI
+on:
+  release:
+    types:
+      - released
+      - prereleased
+
+  workflow_dispatch:
+    inputs:
+      pypi_repo:
+        description: PyPI repository to use
+        required: true
+        type: choice
+        options: ["testpypi", "pypi"]
+
+jobs:
+  build_sdist:
+    runs-on: ubuntu-22.04
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+      - name: Setup Python
+        uses: actions/setup-python@61a6322f88396a6271a6ee3565807d608ecaddd1 # v4.7.0
+        with:
+          python-version-file: '.github/requirements/.python_version'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install \
+            --require-hashes \
+            -r .github/requirements/publish-pypi-requirements.txt
+
+      - name: Build
+        run: python3 -m build --sdist
+
+      - name: Upload Build
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          name: "dist"
+          path: "dist/"
+          if-no-files-found: error
+          retention-days: 5
+
+  publish:
+    runs-on: ubuntu-22.04
+    # environment: pypi  # TODO: needs paid plan
+
+    needs:
+      - build_sdist
+
+    permissions:
+      id-token: write  # Required for PyPI trusted publishing
+
+    steps:
+      - uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        with:
+          name: dist
+          path: dist
+
+      - name: Publish to PyPI
+        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.pypi_repo == 'pypi')
+        uses: pypa/gh-action-pypi-publish@b7f401de30cb6434a1e19f805ff006643653240e # v1.8.10
+
+      - name: Publish to TestPyPI
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.pypi_repo == 'testpypi'
+        uses: pypa/gh-action-pypi-publish@b7f401de30cb6434a1e19f805ff006643653240e # v1.8.10
+        with:
+          repository-url: https://test.pypi.org/legacy/
