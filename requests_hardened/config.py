@@ -14,7 +14,7 @@ class Config:
     ip_filter_allow_localhost: bool
 
     # If True, then HTTP redirects are never allowed.
-    never_allow_redirects: bool
+    never_redirect: bool
 
     # The default timeout value to set to all requests.
     default_timeout: Optional[T_TIMEOUT_TUPLE]

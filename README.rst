@@ -15,7 +15,7 @@ Overrides of Defaults
 This library allows to override some default values from the ``requests`` library
 that can have a security impact:
 
-- ``Config.never_allow_redirects = False`` always reject HTTP redirects
+- ``Config.never_redirect = False`` always reject HTTP redirects
 - ``Config.default_timeout = (2, 10)`` sets the default timeout value when no value or ``None`` is passed
 
 
@@ -43,7 +43,7 @@ Example Usage
   DefaultManager = Manager(
       Config(
           default_timeout=(2, 10),
-          never_allow_redirects=False,
+          never_redirect=False,
           ip_filter_enable=True,
           ip_filter_allow_localhost=False,
       )

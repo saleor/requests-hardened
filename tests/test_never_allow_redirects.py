@@ -8,7 +8,7 @@ DEFAULT_TIMEOUT = (1, 2)
 
 NeverRedirectManager = Manager(
     Config(
-        never_allow_redirects=True,
+        never_redirect=True,
         # irrelevant:
         ip_filter_enable=False,
         ip_filter_allow_localhost=True,
@@ -17,7 +17,7 @@ NeverRedirectManager = Manager(
 )
 
 AllowRedirectManager = NeverRedirectManager.clone()
-AllowRedirectManager.config.never_allow_redirects = False
+AllowRedirectManager.config.never_redirect = False
 
 
 @pytest.mark.parametrize(

@@ -12,7 +12,7 @@ TimeoutManager = Manager(
         # irrelevant:
         ip_filter_enable=False,
         ip_filter_allow_localhost=True,
-        never_allow_redirects=False,
+        never_redirect=False,
     )
 )
 
