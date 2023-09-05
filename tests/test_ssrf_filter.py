@@ -31,7 +31,7 @@ TEST_TIMEOUT_SECS = 5
 SSRFFilter = Manager(
     Config(
         default_timeout=SOCKET_TIMEOUT,
-        never_allow_redirects=False,
+        never_redirect=False,
         ip_filter_enable=True,
         ip_filter_allow_localhost=False,
     )

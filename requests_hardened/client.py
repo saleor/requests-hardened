@@ -18,9 +18,9 @@ class HTTPSession(requests.Session):
 
     def send(self, request: PreparedRequest, **kwargs: Any) -> Response:
         allow_redirects = kwargs.setdefault(
-            "allow_redirects", not self._config.never_allow_redirects
+            "allow_redirects", not self._config.never_redirect
         )
-        if allow_redirects and self._config.never_allow_redirects:
+        if allow_redirects and self._config.never_redirect:
             kwargs["allow_redirects"] = False
 
         timeout = kwargs.setdefault("timeout", self._config.default_timeout)
