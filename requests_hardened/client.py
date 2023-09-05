@@ -45,7 +45,7 @@ class HTTPSession(requests.Session):
             url = filter_request(
                 url,
                 headers=headers,
-                allow_loopback=self._config.ip_filter_allow_localhost,
+                allow_loopback=self._config.ip_filter_allow_loopback_ips,
             )
             request.url = url
             request.headers = headers

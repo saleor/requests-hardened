@@ -33,12 +33,12 @@ SSRFFilter = Manager(
         default_timeout=SOCKET_TIMEOUT,
         never_redirect=False,
         ip_filter_enable=True,
-        ip_filter_allow_localhost=False,
+        ip_filter_allow_loopback_ips=False,
     )
 )
 
 SSRFFilterAllowLocalHost = SSRFFilter.clone()
-SSRFFilterAllowLocalHost.config.ip_filter_allow_localhost = True
+SSRFFilterAllowLocalHost.config.ip_filter_allow_loopback_ips = True
 
 
 @pytest.mark.parametrize(
@@ -170,7 +170,7 @@ def test_url_handling(
     expected_http_host_header: str,
 ):
     manager = SSRFFilter.clone()
-    manager.config.ip_filter_allow_localhost = True
+    manager.config.ip_filter_allow_loopback_ips = True
     with mock_getaddrinfo(resolves_to):
         manager.send_request("GET", input_url)
 

@@ -11,7 +11,7 @@ class Config:
 
     # If ``True``, then loopback IPs are allowed
     # when ``ip_filter_enable`` is set to ``True``.
-    ip_filter_allow_localhost: bool
+    ip_filter_allow_loopback_ips: bool
 
     # If True, then HTTP redirects are never allowed.
     never_redirect: bool
