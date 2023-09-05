@@ -2,9 +2,20 @@
 requests-hardened
 =================
 
+|pypi-latest-version| |pypi-python-versions| |pypi-implementations|
+
+
 ``requests-hardened`` is a library that overrides the default behaviors of the ``requests``
 library, and adds new security features.
 
+Installation
+============
+
+The project is available on PyPI_:
+
+.. code-block::
+
+  pip install requests-hardened
 
 Features
 ========
@@ -57,3 +68,18 @@ Example Usage
   with DefaultManager.get_session() as sess:
       sess.request("GET", "https://example.com")
       sess.request("POST", "https://example.com", json={"foo": "bar"})
+
+
+.. _PyPI: https://pypi.org/project/requests-hardened
+
+.. |pypi-latest-version| image:: https://img.shields.io/pypi/v/requests-hardened.svg
+  :alt: Latest Version
+  :target: `PyPI`_
+
+.. |pypi-python-versions| image:: https://img.shields.io/pypi/pyversions/requests-hardened.svg
+  :alt: Supported Python Versions
+  :target: `PyPI`_
+
+.. |pypi-implementations| image:: https://img.shields.io/pypi/implementation/requests-hardened.svg
+  :alt: Supported Implementations
+  :target: `PyPI`_

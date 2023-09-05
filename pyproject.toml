@@ -5,7 +5,7 @@ requires = ["setuptools>=61.0.0"]
 [project]
 name = "requests-hardened"
 readme = "README.rst"
-description = "A library that overrides the default behaviors of the ``requests`` library, and adds new security features."
+description = "A library that overrides the default behaviors of the requests library, and adds new security features."
 authors = [
     { name = "Saleor Commerce", email = "hello@saleor.io" }
 ]
@@ -39,10 +39,10 @@ classifiers = [
 ]
 
 [project.urls]
-homepage = "https://github.com/NyanKiyoshi/requests-hardened/"
-source = "https://github.com/NyanKiyoshi/requests-hardened/"
-issues = "https://github.com/NyanKiyoshi/requests-hardened/issues"
-changelog = "https://github.com/NyanKiyoshi/requests-hardened/releases/"
+Homepage = "https://github.com/saleor/requests-hardened/"
+Source = "https://github.com/saleor/requests-hardened/"
+Issues = "https://github.com/saleor/requests-hardened/issues"
+Changelog = "https://github.com/saleor/requests-hardened/releases/"
 
 [project.optional-dependencies]
 dev = [
