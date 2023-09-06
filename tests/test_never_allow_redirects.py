@@ -11,7 +11,7 @@ NeverRedirectManager = Manager(
         never_redirect=True,
         # irrelevant:
         ip_filter_enable=False,
-        ip_filter_allow_localhost=True,
+        ip_filter_allow_loopback_ips=True,
         default_timeout=(1, 1),
     )
 )

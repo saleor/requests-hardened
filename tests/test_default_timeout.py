@@ -11,7 +11,7 @@ TimeoutManager = Manager(
         default_timeout=DEFAULT_TIMEOUT,
         # irrelevant:
         ip_filter_enable=False,
-        ip_filter_allow_localhost=True,
+        ip_filter_allow_loopback_ips=True,
         never_redirect=False,
     )
 )
