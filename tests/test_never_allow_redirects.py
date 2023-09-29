@@ -13,6 +13,7 @@ NeverRedirectManager = Manager(
         ip_filter_enable=False,
         ip_filter_allow_loopback_ips=True,
         default_timeout=(1, 1),
+        user_agent_override="user-agent",
     )
 )
 

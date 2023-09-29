@@ -28,7 +28,7 @@ that can have a security impact:
 
 - ``Config.never_redirect = False`` always reject HTTP redirects
 - ``Config.default_timeout = (2, 10)`` sets the default timeout value when no value or ``None`` is passed
-
+- ``Config.user_agent_override = None`` optional config to override ``User-Agent`` header. When set to ``None``, ``requests`` library will set its `default user-agent <https://github.com/psf/requests/blob/ee93fac6b2f715151f1aa9a1a06ddba9f7dcc59a/src/requests/utils.py#L886-L892>`_.
 
 SSRF Filters
 ------------
@@ -57,6 +57,7 @@ Example Usage
           never_redirect=False,
           ip_filter_enable=True,
           ip_filter_allow_localhost=False,
+          user_agent_override=None
       )
   )
 

@@ -30,14 +30,11 @@ class HTTPSession(requests.Session):
 
     def prepare_request(self, request: Request) -> PreparedRequest:
         url = request.url
-
         if self._config.ip_filter_enable is True:
             headers = request.headers or {}
-
             # Cast potentially immutable header list to `dict`
             if not isinstance(headers, dict):
                 headers = cast(dict, dict(**headers))
-
             # Cast `bytes` to `str`
             if isinstance(url, bytes):
                 url = url.decode()
@@ -49,4 +46,6 @@ class HTTPSession(requests.Session):
             )
             request.url = url
             request.headers = headers
+        if self._config.user_agent_override is not None:
+            request.headers.update({"User-Agent": self._config.user_agent_override})
         return super().prepare_request(request)
