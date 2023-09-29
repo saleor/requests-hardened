@@ -34,6 +34,7 @@ SSRFFilter = Manager(
         never_redirect=False,
         ip_filter_enable=True,
         ip_filter_allow_loopback_ips=False,
+        user_agent_override="user-agent",
     )
 )
 

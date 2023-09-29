@@ -18,3 +18,6 @@ class Config:
 
     # The default timeout value to set to all requests.
     default_timeout: Optional[T_TIMEOUT_TUPLE]
+
+    # Override the default User-Agent header of the requests library.
+    user_agent_override: Optional[str] = None
