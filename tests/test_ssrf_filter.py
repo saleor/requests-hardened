@@ -321,3 +321,24 @@ def test_tls_with_SNIs_supported(tmp_path):
     assert (
         original_exception.args[0] == "hostname 'sni.local' doesn't match 'localhost'"
     )
+
+
+@pytest.mark.fake_resolver(enabled=False)
+@mock.patch("requests.sessions.Session.send")
+def test_pass_headers_reference(mocked_send: mock.MagicMock):
+    """
+    Ensure headers passed to IP filter are not modified in place but rather copied.
+    """
+    input_headers = {"foo": "bar"}
+
+    with mock_getaddrinfo("128.99.0.0"):
+        SSRFFilter.send_request("GET", "https://test.local", headers=input_headers)
+        mocked_send.assert_called_once()
+
+        [prepared_request], kwargs = mocked_send.call_args
+        assert isinstance(prepared_request, PreparedRequest)
+        assert prepared_request.method == "GET"
+        assert prepared_request.url == "https://128.99.0.0:443/"
+        assert "Host" not in input_headers
+        assert "Host" in prepared_request.headers
+        assert prepared_request.headers.get("Host") == "test.local"
