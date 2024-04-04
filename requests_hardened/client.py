@@ -33,10 +33,10 @@ class HTTPSession(requests.Session):
         if self._config.ip_filter_enable is True:
             # IP filter will change headers, ensure copying because headers might be a global variable used by other requests
             # ex. https://github.com/lepture/authlib/blob/a7d68b4c3b8a3a7fe0b62943b5228669f2f3dfec/authlib/oauth2/client.py#L205-L206
-            if request.headers:
+            if isinstance(request.headers, dict):
                 headers = request.headers.copy()
             else:
-                headers = {}
+                headers = request.headers or {}
             # Cast potentially immutable header list to `dict`
             if not isinstance(headers, dict):
                 headers = cast(dict, dict(**headers))
