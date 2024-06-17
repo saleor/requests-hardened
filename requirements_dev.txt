@@ -40,5 +40,5 @@ types-urllib3==1.26.25.14
     # via types-requests
 typing-extensions==4.7.1
     # via mypy
-urllib3==2.0.7
+urllib3==2.2.2
     # via requests
