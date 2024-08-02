@@ -39,7 +39,7 @@ IP addresses.
 Settings:
 
 - ``Config.ip_filter_enable`` whether or not to filter the IP addresses
-- ``ip_filter_allow_localhost`` whether or not to allow loopback IP addresses
+- ``ip_filter_allow_loopback_ips`` whether or not to allow loopback IP addresses
 
 
 Example Usage
@@ -56,7 +56,7 @@ Example Usage
           default_timeout=(2, 10),
           never_redirect=False,
           ip_filter_enable=True,
-          ip_filter_allow_localhost=False,
+          ip_filter_allow_loopback_ips=False,
           user_agent_override=None
       )
   )
