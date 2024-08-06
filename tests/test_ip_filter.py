@@ -1,6 +1,7 @@
-import socket
-import requests
 import pytest
+import requests
+import socket
+from requests.exceptions import InvalidURL
 from unittest import mock
 
 from requests_hardened.ip_filter import filter_request
@@ -9,7 +10,7 @@ from requests_hardened.ip_filter import filter_request
 @mock.patch("requests_hardened.ip_filter.parse_url")
 def test_filter_request_handles_parse_url_raise_invalid_url(parse_url_mock):
     parse_url_mock.side_effect = ValueError
-    with pytest.raises(requests.exceptions.InvalidURL):
+    with pytest.raises(InvalidURL):
         filter_request("improper_addr", headers={}, allow_loopback=False)
 
 
