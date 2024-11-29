@@ -29,8 +29,12 @@ pluggy==1.3.0
 pycparser==2.21
     # via cffi
 pytest==7.4.0
+    # via
+    #   pytest-socket
+    #   requests-hardened (pyproject.toml)
+pytest-socket==0.7.0
     # via requests-hardened (pyproject.toml)
-requests==2.31.0
+requests==2.32.3
     # via requests-hardened (pyproject.toml)
 trustme==1.1.0
     # via requests-hardened (pyproject.toml)

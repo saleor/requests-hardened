@@ -3,6 +3,7 @@ import ipaddress
 import socket
 import sys
 from socket import AddressFamily, SocketKind
+from typing import Tuple
 from unittest import mock
 
 import pytest
@@ -63,56 +64,75 @@ SSRFFilterAllowLocalHost.config.ip_filter_allow_loopback_ips = True
     ],
 )
 @pytest.mark.fake_resolver(enabled=False)
-@mock.patch("requests.sessions.Session.send")
-def test_blocks_private_ranges(mocked_send: mock.MagicMock, ip_addr: str):
+def test_blocks_private_ranges(ip_addr: str):
     """Ensure private blocks are rejected."""
     with mock_getaddrinfo(ip_addr):
+        # (!!) We expect no connections to be made inside this test.
+        #      If 'pytest_socket.SocketBlockedError' exception is raised,
+        #      then something is really wrong as it means the test most likely tried
+        #      to connect a private IP address.
         with pytest.raises(InvalidIPAddress):
             SSRFFilter.send_request("GET", "https://test.local")
-        mocked_send.assert_not_called()
 
 
 @pytest.mark.parametrize(
-    "ip_addr, expected_url",
+    "resolve_to_ip_addr, expected_sock_ip_addr",
     [
-        ("128.99.0.0", "https://128.99.0.0:443/"),
-        ("8.0.0.0", "https://8.0.0.0:443/"),
-        ("::192.0.5.0", "https://[::c000:500]:443/"),  # Not IPv4
-        ("::ffff:8063:0", "https://128.99.0.0:443/"),  # IPv6 mapped to IPv4
-        ("::ffff:800:0", "https://8.0.0.0:443/"),  # IPv6 mapped to IPv4
-        (
-            "2004:0db8:1234:5678::abcd:ef01",
-            "https://[2004:db8:1234:5678::abcd:ef01]:443/",
-        ),
+        ("128.99.0.0", "128.99.0.0"),
+        ("8.0.0.0", "8.0.0.0"),
+        # The IPv6 address gets compressed by Python's `ipaddress` library.
+        ("::192.0.5.0", "::c000:500"),
+        ("::ffff:8063:0", "128.99.0.0"),  # IPv6 mapped to IPv4
+        ("::ffff:800:0", "8.0.0.0"),  # IPv6 mapped to IPv4
+        ("2004:0db8:1234:5678::abcd:ef01", "2004:db8:1234:5678::abcd:ef01"),
     ],
 )
 @pytest.mark.fake_resolver(enabled=False)
-@mock.patch("requests.sessions.Session.send")
+@pytest.mark.enable_socket  # We need to be able to create the dummy server
+@mock.patch("urllib3.util.connection.create_connection")
 def test_allows_public_ranges(
-    mocked_send: mock.MagicMock, ip_addr: str, expected_url: str
+    mocked_create_connection: mock.MagicMock,
+    resolve_to_ip_addr: str,
+    expected_sock_ip_addr: str,
 ):
     """Ensure public blocks are allowed."""
 
-    with mock_getaddrinfo(ip_addr):
-        SSRFFilter.send_request("GET", "https://test.local")
-        mocked_send.assert_called_once()
+    dummy_server = InsecureHTTPTestServer()
 
-        [prepared_request], kwargs = mocked_send.call_args
-        assert isinstance(prepared_request, PreparedRequest)
-        assert prepared_request.method == "GET"
-        assert prepared_request.url == expected_url
-        assert prepared_request.headers.get("Host") == "test.local"
+    with dummy_server:
+        with mock_getaddrinfo(resolve_to_ip_addr):
+            mocked_create_connection.return_value = (
+                dummy_server.create_client_socket_conn()
+            )
+            response = SSRFFilter.send_request("GET", "http://test.local")
+            mocked_create_connection.assert_called_once()
+
+            # Ensure the HTTP request was sent properly.
+            assert response.request.method == "GET"
+            assert response.request.headers.get("Host") == "test.local"
+
+            [conn_addr, *_args], _kwargs = mocked_create_connection.call_args
+
+            # Shouldn't pass anything else than requested-hardened's pinned IP address,
+            # especially not a URL hostname.
+            # We should always only resolve once as otherwise we risk race-condition
+            # vulnerabilities, or bypass through malicious DNS round-robin.
+            assert conn_addr == (
+                expected_sock_ip_addr,
+                80,
+            ), "Should have passed the mocked getaddrinfo() IP address"
 
 
 @pytest.mark.parametrize(
-    "input_url, resolves_to, expected_output_url, expected_http_host_header",
+    "input_url, expected_url, resolves_to, expected_sock_addr, expected_http_host_header",
     [
         (
             # Test handling of domains returning IP addresses version 6.
             # Ensures the IP is surrounded by brackets.
-            "https://example.com",
+            "http://example.com/",
+            "http://example.com/",
             "2004:0db8:1234:5678::abcd:ef01",
-            "https://[2004:db8:1234:5678::abcd:ef01]:443/",
+            ("2004:db8:1234:5678::abcd:ef01", 80),
             "example.com",
         ),
         (
@@ -120,68 +140,89 @@ def test_allows_public_ranges(
             # - DNS resolver should be invoked using the IPv6 address without brackets;
             # - HTTP host header should be the IPv6 address (no brackets);
             # - HTTP URL should contain brackets.
-            "https://[2004:0db8:1234:5678::abcd:ef01]",
+            "http://[2004:0db8:1234:5678::abcd:ef01]/",
+            "http://[2004:0db8:1234:5678::abcd:ef01]/",
             "2004:0db8:1234:5678::abcd:ef01",
-            "https://[2004:db8:1234:5678::abcd:ef01]:443/",
-            "2004:0db8:1234:5678::abcd:ef01",
-        ),
-        (
-            # Ensure ports are handled properly
-            "https://[2004:0db8:1234:5678::abcd:ef01]:444",
-            "2004:0db8:1234:5678::abcd:ef01",
-            "https://[2004:db8:1234:5678::abcd:ef01]:444/",
+            ("2004:db8:1234:5678::abcd:ef01", 80),
             "2004:0db8:1234:5678::abcd:ef01",
         ),
         (
             # Ensure ports are handled properly
-            "http://[2004:0db8:1234:5678::abcd:ef01]:444",
+            "http://[2004:0db8:1234:5678::abcd:ef01]:444/",
+            "http://[2004:0db8:1234:5678::abcd:ef01]:444/",
             "2004:0db8:1234:5678::abcd:ef01",
-            "http://[2004:db8:1234:5678::abcd:ef01]:444/",
+            ("2004:db8:1234:5678::abcd:ef01", 444),
             "2004:0db8:1234:5678::abcd:ef01",
         ),
         (
             # Ensure ports are handled properly
-            "http://127.0.0.1:444",
-            "127.0.0.1",
+            "http://[2004:0db8:1234:5678::abcd:ef01]:444/",
+            "http://[2004:0db8:1234:5678::abcd:ef01]:444/",
+            "2004:0db8:1234:5678::abcd:ef01",
+            ("2004:db8:1234:5678::abcd:ef01", 444),
+            "2004:0db8:1234:5678::abcd:ef01",
+        ),
+        (
+            # Ensure ports are handled properly
+            "http://127.0.0.1:444/",
             "http://127.0.0.1:444/",
             "127.0.0.1",
+            ("127.0.0.1", 444),
+            "127.0.0.1",
         ),
         (
             # Ensure ports are handled properly
-            "http://example.com:444",
+            "http://example.com:444/",
+            "http://example.com:444/",
             "127.0.0.1",
-            "http://127.0.0.1:444/",
+            ("127.0.0.1", 444),
             "example.com",
         ),
         (
             # Ensure unicode URLs are encoded to IDNA
-            "https://wroc\u0142aw.test",
+            "http://wroc\u0142aw.test/",
+            "http://xn--wrocaw-6db.test/",
             "127.0.0.1",
-            "https://127.0.0.1:443/",
+            ("127.0.0.1", 80),
             "xn--wrocaw-6db.test",
         ),
     ],
 )
-@mock.patch("requests.sessions.Session.send")
+@pytest.mark.enable_socket  # We need to be able to create the dummy server
+@mock.patch("urllib3.util.connection.create_connection")
 def test_url_handling(
-    mocked_send: mock.MagicMock,
+    mocked_create_connection: mock.MagicMock,
     input_url: str,
+    expected_url,
     resolves_to: str,
-    expected_output_url: str,
+    expected_sock_addr: Tuple[str, int],
     expected_http_host_header: str,
 ):
     manager = SSRFFilter.clone()
     manager.config.ip_filter_allow_loopback_ips = True
-    with mock_getaddrinfo(resolves_to):
-        manager.send_request("GET", input_url)
 
-    mocked_send.assert_called_once()
+    dummy_server = InsecureHTTPTestServer()
 
-    [prepared_request], kwargs = mocked_send.call_args
-    assert isinstance(prepared_request, PreparedRequest)
-    assert prepared_request.method == "GET"
-    assert prepared_request.url == expected_output_url
-    assert prepared_request.headers.get("Host") == expected_http_host_header
+    with dummy_server:
+        mocked_create_connection.return_value = dummy_server.create_client_socket_conn()
+
+        with mock_getaddrinfo(resolves_to):
+            response = manager.send_request("GET", input_url)
+
+    assert response.request.method == "GET"
+    assert response.request.url == expected_url
+    assert response.request.headers.get("Host") == expected_http_host_header
+
+    mocked_create_connection.assert_called_once()
+    [conn_addr, *_args], _kwargs = mocked_create_connection.call_args
+
+    # Shouldn't pass anything else than requested-hardened's pinned IP address,
+    # especially not a URL hostname.
+    # We should always only resolve once as otherwise we risk race-condition
+    # vulnerabilities, or bypass through malicious DNS round-robin.
+    assert conn_addr == (
+        expected_sock_addr
+    ), "Should have passed the mocked getaddrinfo() IP address"
 
 
 @pytest.mark.parametrize(
@@ -247,6 +288,7 @@ def test_rejects_non_inet_socket_family():
 
 @pytest.mark.timeout(TEST_TIMEOUT_SECS)
 @pytest.mark.fake_resolver(enabled=True)
+@pytest.mark.enable_socket  # We need to be able to create the dummy server
 def test_insecure_http_supported():
     """
     Ensure we are able to connect to targets that are using insecure HTTP.
@@ -261,18 +303,23 @@ def test_insecure_http_supported():
 
 @pytest.mark.timeout(TEST_TIMEOUT_SECS)
 @pytest.mark.fake_resolver(enabled=True)
+@pytest.mark.enable_socket  # We need to be able to create the dummy server
 def test_tls_without_SNIs_supported(tmp_path):
     """
     Ensure we are able to connect successfully to a server that doesn't
     have a SNI callback set-up.
     """
+
+    http_manager = SSRFFilterAllowLocalHost.clone()
+
     srv = TLSTestServer(
         tmp_path,
         cert_identities=["test1.local", "test2.local"],
     )
+
     with srv as [_srv_addr, srv_port]:
         do_request = functools.partial(
-            SSRFFilterAllowLocalHost.send_request,
+            http_manager.send_request,
             "GET",
             f"https://test2.local:{srv_port}",
             verify=srv.ca_bundle_path,
@@ -283,23 +330,27 @@ def test_tls_without_SNIs_supported(tmp_path):
 
         # Ensure this test is not testing SNI: when disabling SNI support client-side,
         # this the HTTP request should still succeed.
-        with disable_sni_support():
-            assert do_request().status_code == 200
+        http_manager.config.ip_filter_tls_sni_support = False
+        assert do_request().status_code == 200
 
 
 @pytest.mark.timeout(TEST_TIMEOUT_SECS)
 @pytest.mark.fake_resolver(enabled=True)
+@pytest.mark.enable_socket  # We need to be able to create the dummy server
 def test_tls_with_SNIs_supported(tmp_path):
     """
     Ensure we are able to connect successfully to a server that has a
     SNI callback set-up.
     """
+
+    http_manager = SSRFFilterAllowLocalHost.clone()
+
     srv = SNITLSHTTPTestServer(
         tmp_path, cert_identities=["localhost"], additional_identities=["sni.local"]
     )
     with srv as [_srv_addr, srv_port]:
         do_request = functools.partial(
-            SSRFFilterAllowLocalHost.send_request,
+            http_manager.send_request,
             "GET",
             f"https://sni.local:{srv_port}",
             verify=srv.ca_bundle_path,
@@ -311,8 +362,8 @@ def test_tls_with_SNIs_supported(tmp_path):
         # Ensure when SNI support is disabled client-side, then
         # it no longer works, which allows to be sure the test is indeed testing SNI.
         with pytest.raises(SSLError) as exc_info:
-            with disable_sni_support():
-                assert do_request().status_code == 200
+            http_manager.config.ip_filter_tls_sni_support = False
+            assert do_request().status_code == 200
 
     exc = exc_info.value.args[0]
     assert isinstance(exc, MaxRetryError)
@@ -324,21 +375,27 @@ def test_tls_with_SNIs_supported(tmp_path):
 
 
 @pytest.mark.fake_resolver(enabled=False)
-@mock.patch("requests.sessions.Session.send")
-def test_pass_headers_reference(mocked_send: mock.MagicMock):
+@pytest.mark.enable_socket  # We need to be able to create the dummy server
+def test_pass_headers_reference():
     """
-    Ensure headers passed to IP filter are not modified in place but rather copied.
+    Ensure headers passed to IP filter are not mutated without being copied first.
     """
     input_headers = {"foo": "bar"}
 
-    with mock_getaddrinfo("128.99.0.0"):
-        SSRFFilter.send_request("GET", "https://test.local", headers=input_headers)
-        mocked_send.assert_called_once()
+    dummy_server = InsecureHTTPTestServer()
 
-        [prepared_request], kwargs = mocked_send.call_args
-        assert isinstance(prepared_request, PreparedRequest)
-        assert prepared_request.method == "GET"
-        assert prepared_request.url == "https://128.99.0.0:443/"
-        assert "Host" not in input_headers
-        assert "Host" in prepared_request.headers
-        assert prepared_request.headers.get("Host") == "test.local"
+    http_manager = SSRFFilter.clone()
+    http_manager.config.ip_filter_allow_loopback_ips = True
+
+    with dummy_server as [host, port]:
+        url = f"http://dummy.local:{port}/"
+        with mock_getaddrinfo(host):
+            response = http_manager.send_request("GET", url, headers=input_headers)
+
+    assert response.request.method == "GET"
+    assert response.request.url == url
+    assert "Host" not in input_headers, "Shouldn't have mutated the input headers"
+    assert response.request.headers.get("Host") == "dummy.local"
+    assert (
+        response.request.headers.get("foo") == "bar"
+    ), "Should have preserved the original headers"

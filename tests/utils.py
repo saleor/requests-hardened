@@ -6,8 +6,6 @@ from unittest import mock
 
 from requests.adapters import HTTPAdapter
 
-from requests_hardened.host_header_adapter import HostHeaderSSLAdapter
-
 
 @contextlib.contextmanager
 def create_ssl_socket(

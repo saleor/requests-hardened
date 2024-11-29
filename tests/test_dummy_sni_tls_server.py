@@ -1,9 +1,12 @@
 import ssl
 
+import pytest
+
 from tests.http_test_servers import SNITLSHTTPTestServer
 from tests.utils import get_remote_certificate
 
 
+@pytest.mark.enable_socket # We need to be able to create the dummy server
 def test_dummy_sni_tls_server(tmp_path):
     """
     Tests that the SNI test server works as expected.

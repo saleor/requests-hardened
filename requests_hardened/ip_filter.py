@@ -1,11 +1,9 @@
 import ipaddress
 import logging
 import socket
-from typing import Dict, Tuple, Union
+from typing import Tuple, Union
 
-import requests
-from requests.exceptions import InvalidURL
-from urllib3.util import Url, parse_url
+import requests.exceptions
 from urllib3.util.connection import (  # type: ignore[attr-defined] # `allowed_gai_family` exists. # noqa: E501
     allowed_gai_family,
 )
@@ -63,30 +61,20 @@ def get_ip_address(
     return ip, port
 
 
-def filter_request(
-    url: str, *, headers: Dict[str, Union[str, bytes, None]], allow_loopback: bool
+def filter_host(
+    hostname: str, port: int, *, allow_loopback: bool
 ) -> str:
-    try:
-        parsed_url = parse_url(url)
-    except ValueError as exc:
-        raise InvalidURL from exc
-
-    port = parsed_url.port
-
-    if not port:
-        if parsed_url.scheme == "https":
-            port = 443
-        else:
-            port = 80
-
     # IPv6 URL hostnames are embedded between "[" and "]"
-    old_hostname = parsed_url.hostname
+    old_hostname = hostname
+
     if not old_hostname:
-        raise ValueError("Invalid URL: missing hostname")
+        raise requests.exceptions.InvalidURL("Invalid URL: missing hostname")
+
+    # IPv6 addresses are wrapped with [] in URL hostnames (RFC 273),
+    # we need to remove them in order to be able to parse it.
+    # TODO: is this still needed?
     if old_hostname.startswith("["):
         old_hostname = old_hostname.strip("[]")
-
-    headers["Host"] = old_hostname
 
     try:
         ip_addr, port = get_ip_address(
@@ -98,15 +86,4 @@ def filter_request(
         raise requests.ConnectTimeout("Failed to connect to host") from exc
 
     ip_addr_str = str(ip_addr) if ip_addr.version != 6 else f"[{ip_addr}]"
-
-    return str(
-        Url(
-            scheme=parsed_url.scheme,
-            auth=parsed_url.auth,
-            host=ip_addr_str,
-            port=port,
-            path=parsed_url.path,
-            query=parsed_url.query,
-            fragment=parsed_url.fragment,
-        )
-    )
+    return ip_addr_str
