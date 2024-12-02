@@ -41,7 +41,7 @@ Issues = "https://github.com/saleor/requests-hardened/issues"
 Changelog = "https://github.com/saleor/requests-hardened/releases/"
 
 [tool.poetry.dependencies]
-python = ">=3.8"
+python = ">=3.8,<4.0"
 # We require >=2.32.3 due to depending on `get_connection_with_tls_context`.
 requests = ">=2.32.3,<3.0.0"
 
@@ -50,6 +50,7 @@ pytest = "^7.4.0"
 mypy = "^1.5.1"
 types-requests = ">=2.32.0,<3.0.0"
 trustme = ">=1.1.0,<2.0.0"
+pytest-socket = "^0.7.0"
 
 [tool.setuptools]
 zip-safe = false
