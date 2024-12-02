@@ -10,7 +10,7 @@ authors = [
     "Saleor Commerce <hello@saleor.io>"
 ]
 license = "BSD-3-Clause"
-version = "1.0.0b4"
+version = "1.0.0b5"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
