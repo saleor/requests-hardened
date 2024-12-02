@@ -21,3 +21,7 @@ class Config:
 
     # Override the default User-Agent header of the requests library.
     user_agent_override: Optional[str] = None
+
+    # Whether to enable support for TLS SNI for IP filtering.
+    # Do not disable this option unless you are absolutely sure of what you are doing!
+    ip_filter_tls_sni_support: bool = True

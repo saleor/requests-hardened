@@ -4,10 +4,6 @@ import ssl
 from typing import List, Tuple, Optional, Generator
 from unittest import mock
 
-from requests.adapters import HTTPAdapter
-
-from requests_hardened.host_header_adapter import HostHeaderSSLAdapter
-
 
 @contextlib.contextmanager
 def create_ssl_socket(
@@ -81,21 +77,3 @@ def mock_getaddrinfo(resolve_to_ip: str) -> Generator[List[tuple], None, None]:
 
     with mock.patch.object(socket, "getaddrinfo", new=fake_getaddrinfo):
         yield calls
-
-
-@contextlib.contextmanager
-def disable_sni_support():
-    # Ensure the parent of `HostHeaderSSLAdapter` is `HTTPAdapter` in case
-    # the behavior of `requests-toolbelt` changes in the future.
-    assert HostHeaderSSLAdapter.__bases__[0] is HTTPAdapter
-    original_send = HTTPAdapter.send
-
-    def _wrapped_send(self: HTTPAdapter, request, **kwargs):
-        """
-        Disables the SNI hostname check to ensure our tests for SNI work as expected.
-        """
-        del self.poolmanager.connection_pool_kw["server_hostname"]
-        return original_send(self, request, **kwargs)
-
-    with mock.patch.object(HTTPAdapter, "send", new=_wrapped_send):
-        yield

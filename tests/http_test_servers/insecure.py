@@ -1,3 +1,4 @@
+import socket
 from typing import Tuple, Optional
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -47,6 +48,13 @@ class InsecureHTTPTestServer:
     def stop(self):
         self.server.shutdown()
         self.server_thread.join()
+
+    def create_client_socket(self) -> socket.socket:
+        """Creates a socket to the dummy server."""
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, proto=socket.SOL_TCP)
+        sock.settimeout(0.5)
+        sock.connect(self.server.server_address)
+        return sock
 
     def __enter__(self) -> Tuple[str, int]:
         """
