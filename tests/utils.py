@@ -5,6 +5,12 @@ from typing import List, Tuple, Optional, Generator
 from unittest import mock
 
 
+def create_ssl_context(purpose=ssl.Purpose.SERVER_AUTH) -> ssl.SSLContext:
+    ctx = ssl.create_default_context(purpose)
+    ctx.minimum_version = ssl.TLSVersion.TLSv1_3
+    return ctx
+
+
 @contextlib.contextmanager
 def create_ssl_socket(
     ssl_ctx: ssl.SSLContext, addr: Tuple[str, int], server_hostname: str
