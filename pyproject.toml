@@ -1,20 +1,16 @@
 [build-system]
-build-backend = "setuptools.build_meta"
-requires = ["setuptools>=61.0.0"]
+build-backend = "poetry.core.masonry.api"
+requires = ["poetry-core>=1.5.0"]
 
-[project]
+[tool.poetry]
 name = "requests-hardened"
 readme = "README.rst"
 description = "A library that overrides the default behaviors of the requests library, and adds new security features."
 authors = [
-    { name = "Saleor Commerce", email = "hello@saleor.io" }
+    "Saleor Commerce <hello@saleor.io>"
 ]
-license = { text = "BSD-3-Clause" }
-requires-python = ">=3.8"
+license = "BSD-3-Clause"
 version = "1.0.0b4"
-dependencies = [
-    'requests>=2.32.3,<3.0.0'
-]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -38,20 +34,22 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 
-[project.urls]
+[tool.poetry.urls]
 Homepage = "https://github.com/saleor/requests-hardened/"
 Source = "https://github.com/saleor/requests-hardened/"
 Issues = "https://github.com/saleor/requests-hardened/issues"
 Changelog = "https://github.com/saleor/requests-hardened/releases/"
 
-[project.optional-dependencies]
-dev = [
-    "pytest~=7.4.0",
-    "mypy~=1.5.1",
-    "types-requests>=2.32.0,<3.0.0",
-    "trustme>=1.1.0,<2.0.0",
-    "pytest-socket~=0.7.0"
-]
+[tool.poetry.dependencies]
+python = ">=3.8"
+# We require >=2.32.3 due to depending on `get_connection_with_tls_context`.
+requests = ">=2.32.3,<3.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.0"
+mypy = "^1.5.1"
+types-requests = ">=2.32.0,<3.0.0"
+trustme = ">=1.1.0,<2.0.0"
 
 [tool.setuptools]
 zip-safe = false

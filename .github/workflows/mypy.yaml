@@ -1,7 +1,15 @@
 name: Typechecker
 on:
   push:
+    branches:
+      - main
   pull_request:
+    types:
+      - opened
+      - synchronize
+env:
+  # Disable creating virtual envs instead CI/CD due to being unnecessary.
+  POETRY_VIRTUALENVS_CREATE: "false"
 
 jobs:
   test:
@@ -31,7 +39,9 @@ jobs:
 
       - name: Install Dependencies
         # We cannot use --require-hashes here as we are using different Python versions.
-        run: python -m pip install -r requirements_dev.txt
+        run: |
+          python -m pip install "poetry==$(cat .github/requirements/.poetry_version)"
+          python -m poetry install
 
       - name: Run Mypy
         run: mypy .
