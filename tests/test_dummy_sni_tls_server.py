@@ -1,9 +1,7 @@
-import ssl
-
 import pytest
 
 from tests.http_test_servers import SNITLSHTTPTestServer
-from tests.utils import get_remote_certificate
+from tests.utils import get_remote_certificate, create_ssl_context
 
 
 @pytest.mark.enable_socket # We need to be able to create the dummy server
@@ -25,7 +23,7 @@ def test_dummy_sni_tls_server(tmp_path):
     )
 
     with srv as sock_addr:
-        ssl_ctx = ssl.create_default_context()
+        ssl_ctx = create_ssl_context()
         ssl_ctx.load_verify_locations(srv.ca_bundle_path)
 
         # Retrieve the default TLS certificate (not an SNI callback one).

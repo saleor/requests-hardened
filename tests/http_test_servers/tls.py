@@ -8,6 +8,7 @@ from http.server import HTTPServer
 import trustme
 
 from .insecure import InsecureHTTPTestServer
+from ..utils import create_ssl_context
 
 
 class TLSTestServer(InsecureHTTPTestServer):
@@ -69,7 +70,7 @@ class TLSTestServer(InsecureHTTPTestServer):
 
     @staticmethod
     def create_ssl_context(server_cert: trustme.LeafCert):
-        ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        ssl_context = create_ssl_context(ssl.Purpose.CLIENT_AUTH)
         server_cert.configure_cert(ssl_context)
         return ssl_context
 

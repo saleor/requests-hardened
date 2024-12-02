@@ -1,9 +1,7 @@
-import ssl
-
 import pytest
 
 from tests.http_test_servers import TLSTestServer
-from tests.utils import get_remote_certificate
+from tests.utils import get_remote_certificate, create_ssl_context
 
 
 @pytest.mark.enable_socket # We need to be able to create the dummy server
@@ -19,7 +17,7 @@ def test_dummy_tls_server(tmp_path):
     srv = TLSTestServer(tmp_path, cert_identities=[fqn], cert_options={})
 
     with srv as sock_addr:
-        ssl_ctx = ssl.create_default_context()
+        ssl_ctx = create_ssl_context()
         ssl_ctx.load_verify_locations(srv.ca_bundle_path)
 
         # Get the certificate a domain that is associated with the server's
