@@ -1,7 +1,15 @@
 name: Tests
 on:
   push:
+    branches:
+      - main
   pull_request:
+    types:
+      - opened
+      - synchronize
+env:
+  # Disable creating virtual envs instead CI/CD due to being unnecessary.
+  POETRY_VIRTUALENVS_CREATE: "false"
 
 jobs:
   test:
