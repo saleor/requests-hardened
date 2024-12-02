@@ -60,10 +60,17 @@ class IPFilterAdapter(HTTPAdapter):
         )
         return host_params, pool_kwargs
 
-    def get_connection(self, host_params, pool_kwargs):
-        # TODO: either:
-        #   - Implement this method
-        #   - Always raise due to being a deprecated method
-        #   - Upgrade 'requests' version if they dropped it
-        #     in a more recent minor or major version, and update pyproject constraints.
-        raise NotImplementedError
+    def get_connection(self, url, proxies=None):
+        # Note: we do not support this method due to being deprecated since May 2024.
+        #       Only `get_connection_with_tls_context` is supported by our package,
+        #       due to the deprecated `get_connection` being largely different
+        #       and is unlikely to still be used by other packages.
+        # Additional references:
+        #   - https://github.com/psf/requests/pull/6655
+        #   - https://github.com/psf/requests/pull/6710
+        #   - https://github.com/advisories/GHSA-9wx4-h78v-vm56
+        raise NotImplementedError(
+            "get_connection is not supported in requests-hardened>=v1.0.0b5\n"
+            "Upgrade your 'requests' package to >=2.32.2 and your dependencies "
+            "if they rely on `requests.adapters.HTTPAdapter.get_connection`."
+        )

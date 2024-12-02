@@ -64,21 +64,12 @@ def get_ip_address(
 def filter_host(
     hostname: str, port: int, *, allow_loopback: bool
 ) -> str:
-    # IPv6 URL hostnames are embedded between "[" and "]"
-    old_hostname = hostname
-
-    if not old_hostname:
+    if not hostname:
         raise requests.exceptions.InvalidURL("Invalid URL: missing hostname")
-
-    # IPv6 addresses are wrapped with [] in URL hostnames (RFC 273),
-    # we need to remove them in order to be able to parse it.
-    # TODO: is this still needed?
-    if old_hostname.startswith("["):
-        old_hostname = old_hostname.strip("[]")
 
     try:
         ip_addr, port = get_ip_address(
-            old_hostname, port, allow_loopback=allow_loopback
+            hostname, port, allow_loopback=allow_loopback
         )
     except socket.gaierror as exc:
         raise requests.ConnectionError("Failed to resolve domain") from exc

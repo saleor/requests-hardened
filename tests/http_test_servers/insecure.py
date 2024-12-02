@@ -3,8 +3,6 @@ from typing import Tuple, Optional
 import threading
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-from urllib3.connection import HTTPConnection
-
 
 class HTTPRequestHandler(BaseHTTPRequestHandler):
     def do_HEAD(self):
@@ -51,8 +49,8 @@ class InsecureHTTPTestServer:
         self.server.shutdown()
         self.server_thread.join()
 
-    def create_client_socket_conn(self) -> socket.socket:
-        """Creates a socket connection to the dummy server."""
+    def create_client_socket(self) -> socket.socket:
+        """Creates a socket to the dummy server."""
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, proto=socket.SOL_TCP)
         sock.settimeout(0.5)
         sock.connect(self.server.server_address)

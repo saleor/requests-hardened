@@ -18,7 +18,7 @@ from .http_test_servers import (
     TLSTestServer,
     SNITLSHTTPTestServer,
 )
-from .utils import mock_getaddrinfo, disable_sni_support
+from .utils import mock_getaddrinfo
 
 from requests_hardened.ip_filter import InvalidIPAddress, get_ip_address
 
@@ -102,7 +102,7 @@ def test_allows_public_ranges(
     with dummy_server:
         with mock_getaddrinfo(resolve_to_ip_addr):
             mocked_create_connection.return_value = (
-                dummy_server.create_client_socket_conn()
+                dummy_server.create_client_socket()
             )
             response = SSRFFilter.send_request("GET", "http://test.local")
             mocked_create_connection.assert_called_once()
@@ -204,7 +204,7 @@ def test_url_handling(
     dummy_server = InsecureHTTPTestServer()
 
     with dummy_server:
-        mocked_create_connection.return_value = dummy_server.create_client_socket_conn()
+        mocked_create_connection.return_value = dummy_server.create_client_socket()
 
         with mock_getaddrinfo(resolves_to):
             response = manager.send_request("GET", input_url)
@@ -363,7 +363,7 @@ def test_tls_with_SNIs_supported(tmp_path):
         # it no longer works, which allows to be sure the test is indeed testing SNI.
         with pytest.raises(SSLError) as exc_info:
             http_manager.config.ip_filter_tls_sni_support = False
-            assert do_request().status_code == 200
+            assert do_request()
 
     exc = exc_info.value.args[0]
     assert isinstance(exc, MaxRetryError)
