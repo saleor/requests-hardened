@@ -36,7 +36,7 @@ class HostHeaderSSLAdapter(HTTPAdapter):
 
     """
 
-    def send(self, request, **kwargs):
+    def send(self, request, *args, **kwargs):
         # HTTP headers are case-insensitive (RFC 7230)
         host_header = None
         for header in request.headers:
@@ -54,4 +54,4 @@ class HostHeaderSSLAdapter(HTTPAdapter):
             connection_pool_kwargs.pop("assert_hostname", None)
             connection_pool_kwargs.pop("server_hostname", None)
 
-        return super().send(request, **kwargs)
+        return super().send(request, *args, **kwargs)
