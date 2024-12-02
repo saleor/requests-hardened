@@ -45,11 +45,11 @@ class IPFilterAdapter(HTTPAdapter):
         #       `urllib3.connectionpool.HTTPConnectionPool`.
         if self._is_https_proto is True:
             # For non-TLS SNI servers.
-            pool_kwargs["assert_hostname"] = original_host
+            pool_kwargs["assert_hostname"] = original_host  # type: ignore[typeddict-unknown-key] # Valid parameter for urllib3.connectionpool.HTTPSConnectionPool
 
             # Support TLS servers with SNI callbacks.
             if self._tls_sni_support is True:
-                pool_kwargs["server_hostname"] = original_host
+                pool_kwargs["server_hostname"] = original_host  # type: ignore[typeddict-unknown-key] # Valid parameter for urllib3.connectionpool.HTTPSConnectionPool
 
         # Override the connection hostname to the resolved IP address,
         # and reject if it's a private IP.
