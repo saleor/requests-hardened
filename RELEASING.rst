@@ -54,8 +54,10 @@ Steps:
    3. Click the submit button
 
 4. Request workflow run approval from one of the maintainers.
+5. Once approved, it will be available under the `TestPyPI project`_.
 
 .. _PEP 440: https://peps.python.org/pep-0440/
 .. _Publish to PyPI: https://github.com/saleor/requests-hardened/actions/workflows/publish-pypi.yaml
-.. _PyPI project: https://test.pypi.org/project/requests-hardened/
+.. _PyPI project: https://pypi.org/project/requests-hardened/
+.. _TestPyPI project: https://test.pypi.org/project/requests-hardened/
 .. _TestPyPI: https://test.pypi.org/
