@@ -99,7 +99,7 @@ def test_proxy_tls_without_SNIs_supported(
         assert do_request().status_code == 200
 
         # Ensure this test is not testing SNI: when disabling SNI support client-side,
-        # this the HTTP request should still succeed.
+        # the HTTP request should still succeed.
         http_manager.config.ip_filter_tls_sni_support = False
         assert do_request().status_code == 200
 

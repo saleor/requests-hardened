@@ -10,6 +10,8 @@ from tests.proxy_test_servers.server import run_worker
 def create_dummy_proxy(proto: str) -> str:
     """
     Create a dummy proxy server and listens on a random port (port=0).
+
+    :return: the proxy URL.
     """
 
     # Queue to wait and retrieve the address the server bound to.

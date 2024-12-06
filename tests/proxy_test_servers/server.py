@@ -17,12 +17,6 @@ from pproxy.server import ProxySimple
 
 logger = logging.getLogger(__name__)
 
-supported_protocols = (
-    "http",  # HTTP protocol using the CONNECT HTTP method to establish a tunnel.
-    "socks4",
-    "socks5",
-)
-
 
 class DummyProxyServer:
     def __init__(self, protocol: str, bind_addr: Optional[Tuple[str, int]] = None):
@@ -67,7 +61,7 @@ class DummyProxyServer:
         # `getsockname()` in order to determine which port was allocated to us.
         #
         # After which, we validate whether the value is (host: str, port: int)
-        # due to having the "Any".
+        # due to having the "Any" type.
         addr: socket.socket = self.handler.sockets[0].getsockname()
         assert isinstance(addr, tuple), "Expected a tuple of (host, port)"
         assert len(addr) == 2, "Expected a 2-tuple with only (host, port)"
