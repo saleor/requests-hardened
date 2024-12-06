@@ -141,7 +141,7 @@ def run_worker(
     ... )
     ...
     >>> proc.start()
-    >>> addr = callback_queue.get()
+    >>> addr = callback_queue.get(timeout=5)
     >>> print(f"Listening on: {proto}://{addr[0]}:{addr[1]}")
     >>>
     >>> # Keep the server running for 30s.

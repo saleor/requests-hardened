@@ -33,6 +33,7 @@ SUPPORTED_PROXY_PROTOCOLS = ("socks4", "socks5", "http")
     "proxy_proto",
     SUPPORTED_PROXY_PROTOCOLS,
 )
+@pytest.mark.enable_socket  # We need to be able to create the dummy server
 def test_proxy_ip_filter_blocks_private(
     http_client_proto: str, proxy_proto: str, request: FixtureRequest
 ):

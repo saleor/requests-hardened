@@ -21,7 +21,7 @@ def create_dummy_proxy(proto: str) -> str:
     proc.start()
 
     # Retrieve the ("randomly") bound port number and return it
-    [hostname, port] = queue_bound_addr.get()
+    [hostname, port] = queue_bound_addr.get(timeout=5)
     yield f"{proto}://{hostname}:{port}"
 
     # Shutdown
