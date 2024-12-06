@@ -20,6 +20,11 @@ The project is available on PyPI_:
 Features
 ========
 
+- `SSRF Filters`_: blocks private and loopback IP ranges.
+- `Proxy Support`_: proxies can be used in combination with SSRF Filters for a defense in depth.
+- Handy `Overrides of Defaults`_: allows to enforce secure defaults globally, such as to
+  mitigate DoS attacks.
+
 Overrides of Defaults
 ---------------------
 
@@ -41,9 +46,61 @@ Settings:
 - ``Config.ip_filter_enable`` whether or not to filter the IP addresses
 - ``ip_filter_allow_loopback_ips`` whether or not to allow loopback IP addresses
 
+Proxy Support
+^^^^^^^^^^^^^
 
-Example Usage
-=============
+The SSRF IP filter's behavior with proxies are as follows:
+
+- **Proxy's IP Address:** does not block private and loopback IP addresses (no filtering).
+  Instead, the filter assumes that the proxy URL is never tainted with untrusted
+  user input.
+- **Target IP Address (Tunneled HTTP Requests):** by default, the tunneled requests are
+  filtered for potential SSRF attacks.
+- **Protocols Supported:** SOCKS4, SOCKS5, HTTP, and HTTPS proxy server protocols are supported.
+
+  .. note::
+
+    We rely on the ``requests`` and ``urllib3`` thus the list may change over time.
+
+  .. warning::
+
+    For SOCKS4 and SOCKS5, you need to run ``pip install requests[socks]``
+
+Example Usage:
+
+.. code-block:: python
+
+  from requests_hardened import Config, Manager
+
+  http_manager = Manager(
+      Config(
+          default_timeout=(2, 10),
+          never_redirect=False,
+          # Enable SSRF IP filter
+          ip_filter_enable=True,
+          ip_filter_allow_loopback_ips=False,
+      )
+  )
+
+  # List of proxies
+  proxies = {
+    "https": "socks5://127.0.0.1:8888",
+    "http": "socks5://127.0.0.1:8888",
+  }
+
+  # Sends the HTTP request using the proxy
+  resp = http_manager.send_request("GET", "https://example.com", proxies=proxies)
+  print(resp)
+
+
+.. note::
+
+  For more details on using proxies with the ``requests`` library, see the `official
+  documentation <https://docs.python-requests.org/en/latest/user/advanced/#proxies>`_.
+
+
+Full Example
+============
 
 .. code-block:: python
 
@@ -51,7 +108,7 @@ Example Usage
 
   # Creates a global "manager" that can be used to create ``requests.Session``
   # objects with hardening in place.
-  DefaultManager = Manager(
+  http_manager = Manager(
       Config(
           default_timeout=(2, 10),
           never_redirect=False,
@@ -62,11 +119,11 @@ Example Usage
   )
 
   # Sends an HTTP request without re-using ``requests.Session``:
-  resp = DefaultManager.send_request("GET", "https://example.com")
+  resp = http_manager.send_request("GET", "https://example.com")
   print(resp)
 
   # Sends HTTP requests with reusable ``requests.Session``:
-  with DefaultManager.get_session() as sess:
+  with http_manager.get_session() as sess:
       sess.request("GET", "https://example.com")
       sess.request("POST", "https://example.com", json={"foo": "bar"})
 
