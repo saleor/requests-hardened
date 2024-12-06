@@ -7,40 +7,18 @@ from typing import Tuple
 from unittest import mock
 
 import pytest
-from requests import PreparedRequest
 from requests.exceptions import SSLError
 from urllib3.exceptions import MaxRetryError
 from urllib3.util.ssl_match_hostname import CertificateError
 
-from requests_hardened import Manager, Config
-from .http_test_servers import (
-    InsecureHTTPTestServer,
-    TLSTestServer,
-    SNITLSHTTPTestServer,
-)
-from .utils import mock_getaddrinfo
-
 from requests_hardened.ip_filter import InvalidIPAddress, get_ip_address
 
-# HTTP server can take some time to connect against for some machines (usually up to 1s).
-# It requires a fairly generous timeout without taking too long that the test fails.
-SOCKET_TIMEOUT = (4, 0.1)
+from .http_managers import SSRFFilter, SSRFFilterAllowLocalHost
+from .http_test_servers import (InsecureHTTPTestServer, SNITLSHTTPTestServer,
+                                TLSTestServer)
+from .utils import mock_getaddrinfo
 
 TEST_TIMEOUT_SECS = 5
-
-
-SSRFFilter = Manager(
-    Config(
-        default_timeout=SOCKET_TIMEOUT,
-        never_redirect=False,
-        ip_filter_enable=True,
-        ip_filter_allow_loopback_ips=False,
-        user_agent_override="user-agent",
-    )
-)
-
-SSRFFilterAllowLocalHost = SSRFFilter.clone()
-SSRFFilterAllowLocalHost.config.ip_filter_allow_loopback_ips = True
 
 
 @pytest.mark.parametrize(
@@ -101,9 +79,7 @@ def test_allows_public_ranges(
 
     with dummy_server:
         with mock_getaddrinfo(resolve_to_ip_addr):
-            mocked_create_connection.return_value = (
-                dummy_server.create_client_socket()
-            )
+            mocked_create_connection.return_value = dummy_server.create_client_socket()
             response = SSRFFilter.send_request("GET", "http://test.local")
             mocked_create_connection.assert_called_once()
 
@@ -363,7 +339,7 @@ def test_tls_with_SNIs_supported(tmp_path):
         # it no longer works, which allows to be sure the test is indeed testing SNI.
         with pytest.raises(SSLError) as exc_info:
             http_manager.config.ip_filter_tls_sni_support = False
-            assert do_request()
+            do_request()
 
     exc = exc_info.value.args[0]
     assert isinstance(exc, MaxRetryError)
