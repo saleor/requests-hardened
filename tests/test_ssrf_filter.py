@@ -66,7 +66,7 @@ def test_blocks_private_ranges(ip_addr: str):
     ],
 )
 @pytest.mark.fake_resolver(enabled=False)
-@pytest.mark.enable_socket  # We need to be able to create the dummy server
+@pytest.mark.allow_hosts(['127.0.0.1'])  # We need to be able to create the dummy server
 @mock.patch("urllib3.util.connection.create_connection")
 def test_allows_public_ranges(
     mocked_create_connection: mock.MagicMock,
@@ -164,7 +164,7 @@ def test_allows_public_ranges(
         ),
     ],
 )
-@pytest.mark.enable_socket  # We need to be able to create the dummy server
+@pytest.mark.allow_hosts(['127.0.0.1'])  # We need to be able to create the dummy server
 @mock.patch("urllib3.util.connection.create_connection")
 def test_url_handling(
     mocked_create_connection: mock.MagicMock,
@@ -264,7 +264,7 @@ def test_rejects_non_inet_socket_family():
 
 @pytest.mark.timeout(TEST_TIMEOUT_SECS)
 @pytest.mark.fake_resolver(enabled=True)
-@pytest.mark.enable_socket  # We need to be able to create the dummy server
+@pytest.mark.allow_hosts(['127.0.0.1'])  # We need to be able to create the dummy server
 def test_insecure_http_supported():
     """
     Ensure we are able to connect to targets that are using insecure HTTP.
@@ -279,7 +279,7 @@ def test_insecure_http_supported():
 
 @pytest.mark.timeout(TEST_TIMEOUT_SECS)
 @pytest.mark.fake_resolver(enabled=True)
-@pytest.mark.enable_socket  # We need to be able to create the dummy server
+@pytest.mark.allow_hosts(['127.0.0.1'])  # We need to be able to create the dummy server
 def test_tls_without_SNIs_supported(tmp_path):
     """
     Ensure we are able to connect successfully to a server that doesn't
@@ -312,7 +312,7 @@ def test_tls_without_SNIs_supported(tmp_path):
 
 @pytest.mark.timeout(TEST_TIMEOUT_SECS)
 @pytest.mark.fake_resolver(enabled=True)
-@pytest.mark.enable_socket  # We need to be able to create the dummy server
+@pytest.mark.allow_hosts(['127.0.0.1'])  # We need to be able to create the dummy server
 def test_tls_with_SNIs_supported(tmp_path):
     """
     Ensure we are able to connect successfully to a server that has a
@@ -351,7 +351,7 @@ def test_tls_with_SNIs_supported(tmp_path):
 
 
 @pytest.mark.fake_resolver(enabled=False)
-@pytest.mark.enable_socket  # We need to be able to create the dummy server
+@pytest.mark.allow_hosts(['127.0.0.1'])  # We need to be able to create the dummy server
 def test_pass_headers_reference():
     """
     Ensure headers passed to IP filter are not mutated without being copied first.

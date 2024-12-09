@@ -4,7 +4,7 @@ from tests.http_test_servers import TLSTestServer
 from tests.utils import get_remote_certificate, create_ssl_context
 
 
-@pytest.mark.enable_socket # We need to be able to create the dummy server
+@pytest.mark.allow_hosts(['127.0.0.1']) # We need to be able to create the dummy server
 def test_dummy_tls_server(tmp_path):
     """
     Tests that the test server works expected.
