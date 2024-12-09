@@ -40,7 +40,7 @@ def test_proxy_ip_filter_blocks_private(
     """Ensures private IP addresses are blocked when using proxies."""
 
     proxy_url = request.getfixturevalue(f"dummy_proxy_{proxy_proto}")
-    proxies = {"https": proxy_url, "http": proxy_proto}
+    proxies = {"https": proxy_url, "http": proxy_url}
 
     # Test: ensure IP filter works when the IP address is resolved through DNS.
     with mock_getaddrinfo("10.0.0.1"):
@@ -78,7 +78,7 @@ def test_proxy_tls_without_SNIs_supported(
     """
 
     proxy_url = request.getfixturevalue(f"dummy_proxy_{proxy_proto}")
-    proxies = {"https": proxy_url, "http": proxy_proto}
+    proxies = {"https": proxy_url, "http": proxy_url}
 
     http_manager = SSRFFilterAllowLocalHost.clone()
     srv = TLSTestServer(
@@ -122,7 +122,7 @@ def test_proxy_tls_with_SNIs_supported(
     """
 
     proxy_url = request.getfixturevalue(f"dummy_proxy_{proxy_proto}")
-    proxies = {"https": proxy_url, "http": proxy_proto}
+    proxies = {"https": proxy_url, "http": proxy_url}
 
     http_manager = SSRFFilterAllowLocalHost.clone()
     srv = SNITLSHTTPTestServer(
