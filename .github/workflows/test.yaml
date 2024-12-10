@@ -34,6 +34,10 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }} @ ${{ matrix.python-version }}
+    # A lot wiggle room is needed due to:
+    # - PyPI can occasionally slow down.
+    # - MacOS and Windows machines can sometimes be slower than the Linux ones.
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -52,4 +56,7 @@ jobs:
           python -m poetry install
 
       - name: Run Tests
+        # Tests should takes only a few seconds to run.
+        # If it takes several minutes, then something is stuck.
+        timeout-minutes: 5
         run: pytest tests/

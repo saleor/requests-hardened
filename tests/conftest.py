@@ -4,6 +4,11 @@ from tests.utils import mock_getaddrinfo
 
 FAKE_RESOLVER_MARKER = "fake_resolver"
 
+pytest_plugins = [
+    # Additional fixtures for the test suite.
+    "tests.proxy_test_servers.fixtures"
+]
+
 
 @pytest.mark.tryfirst
 def pytest_load_initial_conftests(early_config, parser, args):

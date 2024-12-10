@@ -1,7 +1,7 @@
 import contextlib
 import socket
 import ssl
-from typing import List, Tuple, Optional, Generator
+from typing import Generator, List, Optional, Tuple, Union
 from unittest import mock
 
 
@@ -43,12 +43,28 @@ def get_remote_certificate(
 
 
 @contextlib.contextmanager
-def mock_getaddrinfo(resolve_to_ip: str) -> Generator[List[tuple], None, None]:
+def mock_getaddrinfo(
+    resolve_to_ip: Union[str, dict[str, str]]
+) -> Generator[List[tuple], None, None]:
     """
     Mocks socket.getaddrinfo() to return a given fake IP address as the resolved value.
 
-    :param resolve_to_ip: The IP address to return whenever the function is invoked.
-    :type resolve_to_ip: str
+    :param resolve_to_ip:
+        Either:
+            - The IP address to return whenever the function is invoked.
+              Example:
+                >>> mock_getaddrinfo(resolve_to_ip="127.0.0.1")
+            - Or, the hostname to resolve the IP to.
+              Any hostname that wasn't provided in the resolve_to_ip list,
+              will raise ``AssertionError``.
+              Example:
+                >>> mock_getaddrinfo(
+                ...     resolve_to_ip={
+                ...         "example1.test": "127.0.0.1",
+                ...         "example2.test": "10.0.0.2",
+                ...     }
+                ... )
+    :type resolve_to_ip: Union[str, dict[str, str]]
 
     :return: A list of resolved endpoints. The list will always contain only one entry,
         which contains the fake IP (`resolve_to_ip`).
@@ -70,13 +86,27 @@ def mock_getaddrinfo(resolve_to_ip: str) -> Generator[List[tuple], None, None]:
 
     def fake_getaddrinfo(hostname, port, *args, **kwargs):
         calls.append((hostname, port, args, kwargs))
+
+        if isinstance(resolve_to_ip, str):
+            wanted_ip_addr = resolve_to_ip
+        elif isinstance(resolve_to_ip, dict):
+            wanted_ip_addr = resolve_to_ip.get(hostname)
+            if wanted_ip_addr is None:
+                raise AssertionError(
+                    f"{hostname} was not defined in 'resolve_to_ip' list"
+                )
+        else:
+            raise ValueError(
+                f"resolve_to_ip must be a string or dict, got instead: {type(resolve_to_ip)}"
+            )
+
         res = [
             (
                 socket.AddressFamily.AF_INET,  # protocol family for socket
                 socket.SocketKind.SOCK_STREAM,  # socket type
                 socket.IPPROTO_TCP,  # protocol for socket
                 "",  # the canonical name for service location
-                (resolve_to_ip, port),  # socket-address for socket
+                (wanted_ip_addr, port),  # socket-address for socket
             )
         ]
         return res
