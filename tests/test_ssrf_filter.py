@@ -14,8 +14,12 @@ from urllib3.util.ssl_match_hostname import CertificateError
 from requests_hardened.ip_filter import InvalidIPAddress, get_ip_address
 
 from .http_managers import SSRFFilter, SSRFFilterAllowLocalHost
-from .http_test_servers import (InsecureHTTPTestServer, SNITLSHTTPTestServer,
-                                TLSTestServer)
+from .http_test_servers import (
+    InsecureHTTPTestServer,
+    SNITLSHTTPTestServer,
+    TLSTestServer,
+)
+from .http_test_servers.utils.http_redirects import create_http_redirect_handler
 from .utils import mock_getaddrinfo
 
 TEST_TIMEOUT_SECS = 5
@@ -66,7 +70,7 @@ def test_blocks_private_ranges(ip_addr: str):
     ],
 )
 @pytest.mark.fake_resolver(enabled=False)
-@pytest.mark.allow_hosts(['127.0.0.1'])  # We need to be able to create the dummy server
+@pytest.mark.allow_hosts(["127.0.0.1"])  # We need to be able to create the dummy server
 @mock.patch("urllib3.util.connection.create_connection")
 def test_allows_public_ranges(
     mocked_create_connection: mock.MagicMock,
@@ -164,7 +168,7 @@ def test_allows_public_ranges(
         ),
     ],
 )
-@pytest.mark.allow_hosts(['127.0.0.1'])  # We need to be able to create the dummy server
+@pytest.mark.allow_hosts(["127.0.0.1"])  # We need to be able to create the dummy server
 @mock.patch("urllib3.util.connection.create_connection")
 def test_url_handling(
     mocked_create_connection: mock.MagicMock,
@@ -264,7 +268,7 @@ def test_rejects_non_inet_socket_family():
 
 @pytest.mark.timeout(TEST_TIMEOUT_SECS)
 @pytest.mark.fake_resolver(enabled=True)
-@pytest.mark.allow_hosts(['127.0.0.1'])  # We need to be able to create the dummy server
+@pytest.mark.allow_hosts(["127.0.0.1"])  # We need to be able to create the dummy server
 def test_insecure_http_supported():
     """
     Ensure we are able to connect to targets that are using insecure HTTP.
@@ -279,7 +283,7 @@ def test_insecure_http_supported():
 
 @pytest.mark.timeout(TEST_TIMEOUT_SECS)
 @pytest.mark.fake_resolver(enabled=True)
-@pytest.mark.allow_hosts(['127.0.0.1'])  # We need to be able to create the dummy server
+@pytest.mark.allow_hosts(["127.0.0.1"])  # We need to be able to create the dummy server
 def test_tls_without_SNIs_supported(tmp_path):
     """
     Ensure we are able to connect successfully to a server that doesn't
@@ -312,7 +316,7 @@ def test_tls_without_SNIs_supported(tmp_path):
 
 @pytest.mark.timeout(TEST_TIMEOUT_SECS)
 @pytest.mark.fake_resolver(enabled=True)
-@pytest.mark.allow_hosts(['127.0.0.1'])  # We need to be able to create the dummy server
+@pytest.mark.allow_hosts(["127.0.0.1"])  # We need to be able to create the dummy server
 def test_tls_with_SNIs_supported(tmp_path):
     """
     Ensure we are able to connect successfully to a server that has a
@@ -351,7 +355,7 @@ def test_tls_with_SNIs_supported(tmp_path):
 
 
 @pytest.mark.fake_resolver(enabled=False)
-@pytest.mark.allow_hosts(['127.0.0.1'])  # We need to be able to create the dummy server
+@pytest.mark.allow_hosts(["127.0.0.1"])  # We need to be able to create the dummy server
 def test_pass_headers_reference():
     """
     Ensure headers passed to IP filter are not mutated without being copied first.
@@ -375,3 +379,63 @@ def test_pass_headers_reference():
     assert (
         response.request.headers.get("foo") == "bar"
     ), "Should have preserved the original headers"
+
+
+@pytest.mark.allow_hosts(["127.0.0.1"])  # We need to be able to create the dummy server
+def test_http_redirect_should_not_affect_request_headers():
+    """
+    Ensure the host header is changed whenever an HTTP redirect happens.
+    """
+
+    http_manager = SSRFFilter.clone()
+    http_manager.config.ip_filter_allow_loopback_ips = True
+
+    # Create a redirector but without an URL for now because we don't know the port
+    # number yet.
+    redirector = create_http_redirect_handler("")
+
+    # Redirects HTTP requests (127.0.0.1 -> 10.0.0.1)
+    dummy_server = InsecureHTTPTestServer(request_handler_class=redirector)
+
+    with dummy_server as [host, port]:
+        # Override
+        redirector.redirect_url_loc = f"http://redirected.local:{port}?noredirect"
+
+        url = f"http://dummy.local:{port}/"
+
+        with mock_getaddrinfo(host):
+            response = http_manager.send_request(
+                "GET", url, headers={"Authorization": "XXX"}
+            )
+
+            # A new Host header value should be set on redirect.
+            assert response.request.headers.get("Host") == "redirected.local"
+
+            # Ensure the Authorization header is dropped when redirected.
+            # This is dictated by:
+            # https://github.com/urllib3/urllib3/blob/181357ed2aecf9c523f2664c05f176cde9692994/src/urllib3/util/retry.py#L192-L194
+            assert response.request.headers.get("Authorization") is None
+
+
+@pytest.mark.allow_hosts(["127.0.0.1"])  # We need to be able to create the dummy server
+def test_http_redirect_should_filter_ip_address():
+    """
+    Ensure when an HTTP request redirects us to a private IP range, we reject.
+    """
+
+    http_manager = SSRFFilter.clone()
+    http_manager.config.ip_filter_allow_loopback_ips = True
+
+    # Redirects HTTP requests (127.0.0.1 -> 10.0.0.1)
+    dummy_server = InsecureHTTPTestServer(
+        request_handler_class=create_http_redirect_handler("https://10.0.0.1")
+    )
+
+    with dummy_server as [host, port]:
+        url = f"http://dummy.local:{port}/"
+        with mock_getaddrinfo(
+            {"dummy.local": host, "127.0.0.1": "127.0.0.1", "10.0.0.1": "10.0.0.1"}
+        ):
+            # Should raise on the HTTP redirect
+            with pytest.raises(InvalidIPAddress, match="10.0.0.1"):
+                http_manager.send_request("GET", url)

@@ -1,10 +1,10 @@
 import socket
-from typing import Tuple, Optional
 import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import Optional, Tuple, Type
 
 
-class HTTPRequestHandler(BaseHTTPRequestHandler):
+class DefaultHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_HEAD(self):
         self.send_response(code=200)
         self.send_header("Connection", "close")
@@ -31,15 +31,19 @@ class InsecureHTTPTestServer:
         Connect to http://localhost:12345
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        request_handler_class: Type[BaseHTTPRequestHandler] = DefaultHTTPRequestHandler,
+    ):
         self.server: Optional[HTTPServer] = None
         self.server_thread: Optional[threading.Thread] = None
+        self._http_request_handler = request_handler_class
 
     def setup_server(self, server: HTTPServer) -> None:
         pass
 
     def start(self) -> Tuple[str, int]:
-        self.server = HTTPServer(("localhost", 0), HTTPRequestHandler)
+        self.server = HTTPServer(("localhost", 0), self._http_request_handler)
         self.setup_server(self.server)
         self.server_thread = threading.Thread(target=self.server.serve_forever)
         self.server_thread.start()

@@ -21,6 +21,7 @@ Features
 ========
 
 - `SSRF Filters`_: blocks private and loopback IP ranges.
+- HTTP Redirects: can be used safely alongside the SSRF filter feature.
 - `Proxy Support`_: proxies can be used in combination with SSRF Filters for a defense in depth.
 - Handy `Overrides of Defaults`_: allows to enforce secure defaults globally, such as to
   mitigate DoS attacks.
