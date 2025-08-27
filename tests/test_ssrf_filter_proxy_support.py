@@ -6,6 +6,7 @@ thus we are only testing these.
 """
 
 import functools
+import sys
 
 import pytest
 from pytest import FixtureRequest
@@ -65,6 +66,7 @@ def test_proxy_ip_filter_blocks_private(
     "proxy_proto",
     SUPPORTED_PROXY_PROTOCOLS,
 )
+@pytest.mark.skipif(sys.version_info >= (3, 14), reason="pytest 8.4.1 doesn't support python3.14 or higher")
 @pytest.mark.fake_resolver(enabled=True)
 @pytest.mark.allow_hosts(['127.0.0.1'])  # We need to be able to create the dummy server
 def test_proxy_tls_without_SNIs_supported(
@@ -109,6 +111,7 @@ def test_proxy_tls_without_SNIs_supported(
     "proxy_proto",
     SUPPORTED_PROXY_PROTOCOLS,
 )
+@pytest.mark.skipif(sys.version_info >= (3, 14), reason="pytest 8.4.1 doesn't support python3.14 or higher")
 @pytest.mark.fake_resolver(enabled=True)
 @pytest.mark.allow_hosts(['127.0.0.1'])  # We need to be able to create the dummy server
 def test_proxy_tls_with_SNIs_supported(
