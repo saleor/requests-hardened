@@ -25,12 +25,12 @@ jobs:
           - "3.11"
           - "3.12"
           - "3.13"
-          - "pypy3.9"
           - "pypy3.10"
+          - "pypy3.11"
         os:
           - macos-latest
           - windows-latest
-          - ubuntu-22.04
+          - ubuntu-24.04
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.os }} @ ${{ matrix.python-version }}
