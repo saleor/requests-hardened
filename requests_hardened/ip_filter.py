@@ -1,7 +1,7 @@
 import ipaddress
 import logging
 import socket
-from typing import Tuple, Union
+from typing import Tuple, Union, cast
 
 import requests.exceptions
 from urllib3.util.connection import (  # type: ignore[attr-defined] # `allowed_gai_family` exists. # noqa: E501
@@ -33,7 +33,7 @@ def get_ip_address(
         raise ValueError(
             "Only AF_INET and AF_INET6 socket address families are supported"
         )
-    port = socket_address[1]
+    port = cast(int, socket_address[1])
     ip = ipaddress.ip_address(socket_address[0])
 
     # Python considers special IP ranges representing IPv4 addresses as being
