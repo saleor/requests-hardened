@@ -42,7 +42,7 @@ Issues = "https://github.com/saleor/requests-hardened/issues"
 Changelog = "https://github.com/saleor/requests-hardened/releases/"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<4.0"
+python = ">=3.9.2,<4.0"
 # We require >=2.32.3 due to depending on `get_connection_with_tls_context`.
 requests = ">=2.32.3,<3.0.0"
 
