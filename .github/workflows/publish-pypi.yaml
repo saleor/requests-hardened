@@ -17,7 +17,7 @@ env:
   POETRY_VIRTUALENVS_CREATE: "false"
 
 jobs:
-  build_sdist:
+  build:
     runs-on: ubuntu-22.04
 
     permissions:
@@ -37,7 +37,7 @@ jobs:
           python -m pip install "poetry==$(cat .github/requirements/.poetry_version)"
 
       - name: Build
-        run: python3 -m poetry build -f sdist -o ./dist
+        run: python3 -m poetry build -o ./dist
 
       - name: Upload Build
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -52,7 +52,7 @@ jobs:
     environment: publish-pypi
 
     needs:
-      - build_sdist
+      - build
 
     permissions:
       id-token: write  # Required for PyPI trusted publishing
