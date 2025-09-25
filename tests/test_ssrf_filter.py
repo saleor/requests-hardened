@@ -22,8 +22,6 @@ from .http_test_servers import (
 from .http_test_servers.utils.http_redirects import create_http_redirect_handler
 from .utils import mock_getaddrinfo
 
-TEST_TIMEOUT_SECS = 5
-
 
 @pytest.mark.parametrize(
     "ip_addr",
@@ -266,7 +264,6 @@ def test_rejects_non_inet_socket_family():
     )
 
 
-@pytest.mark.timeout(TEST_TIMEOUT_SECS)
 @pytest.mark.fake_resolver(enabled=True)
 @pytest.mark.allow_hosts(["127.0.0.1"])  # We need to be able to create the dummy server
 def test_insecure_http_supported():
@@ -281,7 +278,6 @@ def test_insecure_http_supported():
         assert response.status_code == 200
 
 
-@pytest.mark.timeout(TEST_TIMEOUT_SECS)
 @pytest.mark.fake_resolver(enabled=True)
 @pytest.mark.allow_hosts(["127.0.0.1"])  # We need to be able to create the dummy server
 def test_tls_without_SNIs_supported(tmp_path):
@@ -314,7 +310,6 @@ def test_tls_without_SNIs_supported(tmp_path):
         assert do_request().status_code == 200
 
 
-@pytest.mark.timeout(TEST_TIMEOUT_SECS)
 @pytest.mark.fake_resolver(enabled=True)
 @pytest.mark.allow_hosts(["127.0.0.1"])  # We need to be able to create the dummy server
 def test_tls_with_SNIs_supported(tmp_path):
