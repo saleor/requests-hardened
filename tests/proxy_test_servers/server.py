@@ -27,7 +27,7 @@ class DummyProxyServer:
         else:
             self._addr = ("127.0.0.1", 0)
 
-        self.loop = asyncio.get_event_loop()
+        self.loop = asyncio.new_event_loop()
         self.handler: Optional[asyncio.Server] = None
 
     def start(self) -> (str, int):
@@ -99,6 +99,7 @@ class DummyProxyServer:
 
     def __exit__(self, *args):
         self.shutdown()
+        self.loop.close()
 
 
 def run_worker(

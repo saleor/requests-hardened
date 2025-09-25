@@ -10,14 +10,14 @@ pytest_plugins = [
 ]
 
 
-@pytest.mark.tryfirst
-def pytest_load_initial_conftests(early_config, parser, args):
+@pytest.hookimpl(tryfirst=True)
+def pytest_configure(config):
     """
     Register the fake-resolver marker inside pytest.
 
     This removes runtime warnings about unknown marker names being used.
     """
-    early_config.addinivalue_line(
+    config.addinivalue_line(
         "markers",
         f"{FAKE_RESOLVER_MARKER}: return fake IP address when resolving DNS.",
     )
