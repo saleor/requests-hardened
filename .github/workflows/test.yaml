@@ -55,7 +55,8 @@ jobs:
         run: |
           # Dependency needed for building 'cryptography' PyPI package when
           # wheels aren't available
-          vcpkg install openssl
+          # vcpkg install openssl
+          vcpkg integrate install
 
       - name: Install Dependencies
         # We cannot use --require-hashes here as we are using different Python versions.
