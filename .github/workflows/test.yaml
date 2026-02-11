@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - fix/missing/windows-package
   pull_request:
     types:
       - opened
@@ -48,6 +49,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           allow-prereleases: true
+
+      - name: Install Windows Dependencies
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: |
+          # Dependency needed for building 'cryptography' PyPI package when
+          # wheels aren't available
+          vcpkg install openssl
 
       - name: Install Dependencies
         # We cannot use --require-hashes here as we are using different Python versions.
