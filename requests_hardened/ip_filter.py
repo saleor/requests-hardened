@@ -11,12 +11,21 @@ from urllib3.util.connection import (  # type: ignore[attr-defined] # `allowed_g
 logger = logging.getLogger(__name__)
 
 # Additional CIDRs that should be blocked
-EXTRA_BLOCKED_NET_RANGES: tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...] = (
+EXTRA_BLOCKED_NET_RANGES: tuple[
+    Union[ipaddress.IPv4Network, ipaddress.IPv6Network], ...
+] = (
     ipaddress.ip_network("192.88.99.0/24"),  # 6to4 relay anycast
     ipaddress.ip_network("100.64.0.0/10"),  # CG-NAT, can route to internal workloads
     ipaddress.ip_network("5f00::/16"),  # IPv6 Segment Routing
     ipaddress.ip_network("64:ff9b::/96"),  # used for IPv6 & IPv4 translation (NAT64)
     ipaddress.ip_network("2001:20::/28"),  # ORCHIDv2 (overlay identifiers)
+
+    # Fixes https://github.com/python/cpython/issues/113171 for outdated CPython
+    # installations.
+    ipaddress.ip_network("192.0.0.0/24"),
+    ipaddress.ip_network("64:ff9b:1::/48"),
+    ipaddress.ip_network("2002::/16"),
+    ipaddress.ip_network("3fff::/20"),
 )
 
 
@@ -25,7 +34,7 @@ class InvalidIPAddress(requests.RequestException):
 
 
 def _is_ip_in_extra_blocked_ranges(
-    ip: ipaddress.IPv4Address | ipaddress.IPv6Address,
+    ip: Union[ipaddress.IPv4Address, ipaddress.IPv6Address],
 ) -> bool:
     """Checks whether a given IP is part of the additional disallowed ranges."""
 
