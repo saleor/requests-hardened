@@ -1,16 +1,20 @@
 [build-system]
-build-backend = "poetry.core.masonry.api"
-requires = ["poetry-core>=1.5.0"]
+# Note: uv_build version constraints must match the uv version, e.g., if you have
+#       'uv==0.11.3' installed but you put 'uv_build>=0.10.0,<0.11.0' then the
+#       version will mismatch (which will prevent uv from installing a "compatible"
+#       uv_build version).
+requires = ["uv_build>=0.11.0,<0.12.0"]
+build-backend = "uv_build"
 
-[tool.poetry]
+[project]
 name = "requests-hardened"
 readme = "README.rst"
 description = "A library that overrides the default behaviors of the requests library, and adds new security features."
 authors = [
-    "Saleor Commerce <hello@saleor.io>"
+    { name = "Saleor Commerce", email = "hello@saleor.io>" }
 ]
 license = "BSD-3-Clause"
-version = "1.2.1"
+version = "1.3.0"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -34,29 +38,30 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: PyPy",
 ]
 
-[tool.poetry.urls]
+# NOTE: make sure to update ./.github/requirements/.python_version.
+#       Must be set to the lowest Python version that it is supported by this project.
+requires-python = ">=3.10"
+dependencies = [
+    # We require >=2.32.3 due to depending on `get_connection_with_tls_context`.
+    "requests>=2.32.3,<3.0.0"
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.3,<9.0.0",
+    "mypy>=1.5.1,<1.6.0",
+    "types-requests>=2.32.0,<3.0.0",
+    "trustme>=1.1.0,<2.0.0",
+    "pytest-socket>=0.7.0,<8.0.0",
+    "pproxy>=2.7.9,<2.8.0", # TODO: w/ socks
+    "requests[socks]>=2.32.3,<3.0.0",
+]
+
+[project.urls]
 Homepage = "https://github.com/saleor/requests-hardened/"
 Source = "https://github.com/saleor/requests-hardened/"
 Issues = "https://github.com/saleor/requests-hardened/issues"
 Changelog = "https://github.com/saleor/requests-hardened/releases/"
-
-[tool.poetry.dependencies]
-python = ">=3.10,<4.0"
-# We require >=2.32.3 due to depending on `get_connection_with_tls_context`.
-requests = ">=2.32.3,<3.0.0"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.4.0"
-mypy = "^1.5.1"
-types-requests = ">=2.32.0,<3.0.0"
-trustme = ">=1.1.0,<2.0.0"
-pytest-socket = "^0.7.0"
-pproxy = "^2.7.9"
-requests = { version = ">=2.32.3,<3.0.0" , extras = ["socks"] }
-
-[tool.setuptools]
-zip-safe = false
-packages = ["requests_hardened"]
 
 [tool.pytest.ini_options]
 # Disallow creating sockets (using 'pytest-socket' library)

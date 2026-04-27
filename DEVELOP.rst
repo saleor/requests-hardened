@@ -19,8 +19,7 @@ You can start a proxy using one of these options:
 Using pproxy
 ^^^^^^^^^^^^
 
-The `pproxy`_ command comes pre-installed as part of the development dependencies
-(``poetry install --with dev``).
+The `pproxy`_ command comes pre-installed as part of the development dependencies.
 
 .. note::
 
