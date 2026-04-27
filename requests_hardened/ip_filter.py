@@ -10,9 +10,29 @@ from urllib3.util.connection import (  # type: ignore[attr-defined] # `allowed_g
 
 logger = logging.getLogger(__name__)
 
+# Additional CIDRs that should be blocked
+EXTRA_BLOCKED_NET_RANGES: tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...] = (
+    ipaddress.ip_network("192.88.99.0/24"),  # 6to4 relay anycast
+    ipaddress.ip_network("100.64.0.0/10"),  # CG-NAT, can route to internal workloads
+    ipaddress.ip_network("5f00::/16"),  # IPv6 Segment Routing
+    ipaddress.ip_network("64:ff9b::/96"),  # used for IPv6 & IPv4 translation (NAT64)
+    ipaddress.ip_network("2001:20::/28"),  # ORCHIDv2 (overlay identifiers)
+)
+
 
 class InvalidIPAddress(requests.RequestException):
     pass
+
+
+def _is_ip_in_extra_blocked_ranges(
+    ip: ipaddress.IPv4Address | ipaddress.IPv6Address,
+) -> bool:
+    """Checks whether a given IP is part of the additional disallowed ranges."""
+
+    for net in EXTRA_BLOCKED_NET_RANGES:
+        if ip in net:
+            return True
+    return False
 
 
 def get_ip_address(
@@ -40,12 +60,14 @@ def get_ip_address(
     # private ranges, such as ::ffff:0:0/96, ::/128.
     # Because of that, we need to check the IPv4 address instead of the IPv6 one.
     # https://github.com/python/cpython/commit/ed391090cc8332406e6225d40877db6ff44a7104
-    if ip.version == 6 and (ipv4 := ip.ipv4_mapped) is not None:
-        ip = ipv4
+    if ip.version == 6:
+        ip = cast(ipaddress.IPv6Address, ip)
+        if (ipv4 := ip.ipv4_mapped) is not None:
+            ip = ipv4
 
     if allow_loopback and ip.is_loopback:
         return ip, port
-    elif ip.is_private:
+    elif ip.is_private or ip.is_multicast or _is_ip_in_extra_blocked_ranges(ip):
         logger.warning(
             "Forbidden IP address: %s for hostname %s",
             ip,

@@ -3,7 +3,7 @@ import ipaddress
 import socket
 import sys
 from socket import AddressFamily, SocketKind
-from typing import Tuple
+from typing import Iterator, Tuple
 from unittest import mock
 
 import pytest
@@ -21,6 +21,9 @@ from .http_test_servers import (
 )
 from .http_test_servers.utils.http_redirects import create_http_redirect_handler
 from .utils import mock_getaddrinfo
+
+
+IPAddress = ipaddress.IPv4Address | ipaddress.IPv6Address
 
 
 @pytest.mark.parametrize(
@@ -41,6 +44,13 @@ from .utils import mock_getaddrinfo
         "::ffff:192.168.2.1",
         "::ffff:192.0.2.0",  # broadcast address
         "2001:0db8:85a3:0000:0000:8a2e:0370:7334",
+        # RFC 6598 - Shared Address Space (https://github.com/python/cpython/issues/119812)
+        "100.64.0.1",
+        "::ffff:100.64.0.1",
+        "::ffff:6440:1",  # Compressed 100.64.0.1
+        "0000:0000:0000:0000:0000:ffff:6440:0001",  # Expanded 100.64.0.1
+        "100.64.0.0",  # first address of 100.64.0.0/10
+        "100.127.255.255",  # last address for 100.64.0.0/10
     ],
 )
 @pytest.mark.fake_resolver(enabled=False)
@@ -53,6 +63,70 @@ def test_blocks_private_ranges(ip_addr: str):
         #      to connect a private IP address.
         with pytest.raises(InvalidIPAddress):
             SSRFFilter.send_request("GET", "https://test.local")
+
+
+@pytest.mark.parametrize(
+    "cidr",
+    [
+        "0.0.0.0/8",
+        "10.0.0.0/8",
+        "100.64.0.0/10",
+        "127.0.0.0/8",
+        "169.254.0.0/16",
+        "172.16.0.0/12",
+        "192.0.0.0/24",
+        "192.0.2.0/24",
+        "192.88.99.0/24",
+        "192.168.0.0/16",
+        "198.18.0.0/15",
+        "198.51.100.0/24",
+        "203.0.113.0/24",
+        "224.0.0.0/4",
+        "233.252.0.0/24",
+        "240.0.0.0/4",
+        "255.255.255.255/32",
+        "::/128",
+        "::1/128",
+        "::ffff:0:0/96",
+        "64:ff9b::/96",
+        "64:ff9b:1::/48",
+        "100::/64",
+        "2001::/32",
+        "2001:20::/28",
+        "2001:db8::/32",
+        "2002::/16",
+        "3fff::/20",
+        "5f00::/16",
+        "fc00::/7",
+        "fe80::/10",
+        "ff00::/8",
+    ],
+)
+@pytest.mark.fake_resolver(enabled=False)
+def test_blocks_all_reserved_ip_address_ranges(cidr: str):
+
+    # Tests against 3 addresses, e.g., for 127.0.0.0/8:
+    # - first_addr=127.0.0.0 (network address)
+    # - host_address=127.0.0.1 (first address)
+    # - last_addr=127.255.255.255 (broadcast)
+    net = ipaddress.ip_network(cidr)
+    first_addr, last_addr = net.network_address, net.broadcast_address
+
+    # list[IPv4Address|IPv6Address] is only for Python <= 3.12.
+    # Should be removed once 3.12 is EOL (~Nov 2028)
+    hosts: Iterator[IPAddress] | list[IPAddress] = net.hosts()
+    host_address = hosts[0] if isinstance(hosts, list) else next(hosts)
+
+    for addr in [first_addr, host_address, last_addr]:
+        assert isinstance(addr, (ipaddress.IPv4Address, ipaddress.IPv6Address))
+
+        with mock_getaddrinfo(str(addr)):
+            # (!!) We expect no connections to be made inside this test.
+            #      If 'pytest_socket.SocketBlockedError' exception is raised,
+            #      then something is really wrong as it means the test most likely tried
+            #      to connect a private IP address.
+            with pytest.raises(InvalidIPAddress):
+                SSRFFilter.send_request("GET", "https://test.local")
 
 
 @pytest.mark.parametrize(
