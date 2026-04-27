@@ -1,11 +1,10 @@
 from unittest import mock
 
 import pytest
-
 import requests
+from requests.utils import default_headers
 
-from requests_hardened import Manager, Config
-
+from requests_hardened import Config, Manager
 
 UserAgentNotDefinedManager = Manager(
     Config(
@@ -50,3 +49,35 @@ def test_user_agent_override_undefined(mocked_send: mock.MagicMock):
     prep_request = mocked_send.call_args[0][0]
     assert mocked_send.assert_called_once
     assert prep_request.headers.get("User-Agent") == f"python-requests/{requests.__version__}"
+
+
+@mock.patch("requests.sessions.Session.send")
+@pytest.mark.parametrize(
+    "user_agent_header_name",
+    [
+        "User-Agent",  # title case
+        "User-AGENT",  # mixed case
+        "USER-AGENT",  # all caps
+        "user-agent",  # lowercase
+    ],
+)
+def test_user_agent_header_is_case_insensitive(
+    mocked_send: mock.MagicMock,
+    user_agent_header_name: str,
+):
+    http_manager = UserAgentNotDefinedManager.clone()
+    http_manager.config.user_agent_override = "My custom UA"
+
+    input_headers = {user_agent_header_name: "This value should be overriden"}
+    expected_headers = default_headers()
+    expected_headers["User-Agent"] = "My custom UA"
+
+    http_manager.send_request(
+        "GET",
+        "https://example.com",
+        headers=input_headers,
+    )
+
+    prep_request = mocked_send.call_args[0][0]
+    assert mocked_send.assert_called_once
+    assert prep_request.headers == expected_headers

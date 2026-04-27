@@ -1,4 +1,7 @@
+from typing import Union
+import requests
 from requests.adapters import HTTPAdapter
+from requests.structures import CaseInsensitiveDict
 from requests_hardened.ip_filter import filter_host
 
 
@@ -20,7 +23,12 @@ class IPFilterAdapter(HTTPAdapter):
         self._allow_loopback = allow_loopback
         self._tls_sni_support = tls_sni_support
 
-    def build_connection_pool_key_attributes(self, request, verify, cert=None):
+    def build_connection_pool_key_attributes(
+        self,
+        request: requests.PreparedRequest,
+        verify: Union[bool, str],
+        cert: Union[str, tuple[str, str], None] = None,
+    ):
         host_params, pool_kwargs = super().build_connection_pool_key_attributes(
             request, verify, cert
         )
@@ -29,9 +37,9 @@ class IPFilterAdapter(HTTPAdapter):
         # subsequent requests.
         # e.g., https://github.com/lepture/authlib/blob/a7d68b4c3b8a3a7fe0b62943b5228669f2f3dfec/authlib/oauth2/client.py#L205-L206
         if request.headers:
-            request.headers = dict(**request.headers)
+            request.headers = CaseInsensitiveDict(request.headers)
         else:
-            request.headers = {}
+            request.headers = CaseInsensitiveDict()
 
         # Adds the original URL hostname as the 'Host' header.
         original_host = request.headers["Host"] = host_params["host"]
