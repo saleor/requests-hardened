@@ -47,5 +47,5 @@ class HTTPSession(requests.Session):
 
     def prepare_request(self, request: Request) -> PreparedRequest:
         if self._config.user_agent_override is not None:
-            request.headers.update({"User-Agent": self._config.user_agent_override})
+            request.headers["User-Agent"] = self._config.user_agent_override
         return super().prepare_request(request)
