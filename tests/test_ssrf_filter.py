@@ -3,17 +3,19 @@ import ipaddress
 import socket
 import sys
 from socket import AddressFamily, SocketKind
-from typing import Iterator, Tuple
+from typing import Iterator, Mapping, Tuple
 from unittest import mock
 
 import pytest
 from requests.exceptions import SSLError
+from requests.structures import CaseInsensitiveDict
+from requests.utils import default_headers
 from urllib3.exceptions import MaxRetryError
 from urllib3.util.ssl_match_hostname import CertificateError
 
 from requests_hardened.ip_filter import InvalidIPAddress, get_ip_address
 
-from .http_managers import SSRFFilter, SSRFFilterAllowLocalHost
+from .http_managers import DEFAULT_TEST_USER_AGENT, SSRFFilter, SSRFFilterAllowLocalHost
 from .http_test_servers import (
     InsecureHTTPTestServer,
     SNITLSHTTPTestServer,
@@ -21,7 +23,6 @@ from .http_test_servers import (
 )
 from .http_test_servers.utils.http_redirects import create_http_redirect_handler
 from .utils import mock_getaddrinfo
-
 
 IPAddress = ipaddress.IPv4Address | ipaddress.IPv6Address
 
@@ -448,6 +449,56 @@ def test_pass_headers_reference():
     assert (
         response.request.headers.get("foo") == "bar"
     ), "Should have preserved the original headers"
+
+
+
+@pytest.mark.fake_resolver(enabled=False)
+@pytest.mark.allow_hosts(["127.0.0.1"])  # We need to be able to create the dummy server
+@pytest.mark.parametrize(
+    ("_case", "input_headers", "expected_headers"),
+    [
+        (
+            # When a custom value is provided in 'Host', then it should replace it
+            # with the URL's hostname instead
+            "Custom host header should be dropped",
+            {"HoST": "foo.local"},
+            {
+                **default_headers(),
+                "Host": "dummy.local",
+                "User-Agent": DEFAULT_TEST_USER_AGENT,
+            },
+        ),
+        (
+            # When passing custom headers and the library doesn't have an override
+            # for it (i.e., when not providing 'User-Agent' or 'Host'), then it should
+            # not touch the headers
+            "Non-overridden headers should be kept",
+            {"x-forwarded-for": "127.0.0.1", "AUTHORIZATION": "Bearer Foo"},
+            {
+                **default_headers(),
+                "x-forwarded-for": "127.0.0.1",
+                "AUTHORIZATION": "Bearer Foo",
+                "Host": "dummy.local",
+                "User-Agent": DEFAULT_TEST_USER_AGENT,
+            },
+        ),
+    ],
+)
+def test_headers_are_case_insensitive(
+    _case: str, input_headers: Mapping[str, str], expected_headers: CaseInsensitiveDict
+):
+    dummy_server = InsecureHTTPTestServer()
+
+    http_manager = SSRFFilter.clone()
+    http_manager.config.ip_filter_allow_loopback_ips = True
+
+    with dummy_server as [host, port]:
+        url = f"http://dummy.local:{port}/"
+        with mock_getaddrinfo(host):
+            response = http_manager.send_request("GET", url, headers=input_headers)
+
+    actual_headers = response.request.headers
+    assert actual_headers == expected_headers
 
 
 @pytest.mark.allow_hosts(["127.0.0.1"])  # We need to be able to create the dummy server

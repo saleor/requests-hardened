@@ -4,13 +4,15 @@ from requests_hardened import Config, Manager
 # It requires a fairly generous timeout without taking too long that the test fails.
 SOCKET_TIMEOUT = (4, 0.1)
 
+DEFAULT_TEST_USER_AGENT = "user-agent"
+
 SSRFFilter = Manager(
     Config(
         default_timeout=SOCKET_TIMEOUT,
         never_redirect=False,
         ip_filter_enable=True,
         ip_filter_allow_loopback_ips=False,
-        user_agent_override="user-agent",
+        user_agent_override=DEFAULT_TEST_USER_AGENT,
     )
 )
 
