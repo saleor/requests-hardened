@@ -37,10 +37,10 @@ jobs:
         with:
           # WARNING: remember to bump 'build-system' in ./pyproject.toml when changing
           #          the uv version
-          version: "0.11.7"
+          version: "0.11.19"
           # hash for 'uv-x86_64-unknown-linux-gnu.tar.gz'
           # (from https://github.com/astral-sh/uv/releases)
-          checksum: "6681d691eb7f9c00ac6a3af54252f7ab29ae72f0c8f95bdc7f9d1401c23ea868"
+          checksum: "7035608168e106375b36d0c818d537a889c51a8625fe7f8f7cad5e62b947c368"
 
       - name: Build
         run: uv build -o ./dist
