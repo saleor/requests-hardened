@@ -26,8 +26,6 @@ Steps:
      - 1.0.0
      - 1.1.0a1
 
-     Poetry will also detect non-compliance by running the command ``poetry check``.
-
 2. Merge the pull request
 3. Create a GitHub release, and include ``v`` as the version prefix, e.g., ``v1.0.0b5``
 4. The `Publish to PyPI`_ workflow will then trigger

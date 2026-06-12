@@ -12,10 +12,7 @@ on:
       - ".github/workflows/check-licenses.yaml"
       # Python Ecosystem
       - "**/pyproject.toml"
-      - "**/setup.py"
-      - "**/requirements*.txt"
-      - "**/Pipfile.lock"
-      - "**/poetry.lock"
+      - "**/uv.lock"
 
 jobs:
   default:
