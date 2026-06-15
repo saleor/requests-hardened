@@ -197,7 +197,7 @@ def test_allows_public_ranges(
             "http://[2004:0db8:1234:5678::abcd:ef01]/",
             "2004:0db8:1234:5678::abcd:ef01",
             ("2004:db8:1234:5678::abcd:ef01", 80),
-            "2004:0db8:1234:5678::abcd:ef01",
+            "[2004:0db8:1234:5678::abcd:ef01]",
         ),
         (
             # Ensure ports are handled properly
@@ -205,7 +205,7 @@ def test_allows_public_ranges(
             "http://[2004:0db8:1234:5678::abcd:ef01]:444/",
             "2004:0db8:1234:5678::abcd:ef01",
             ("2004:db8:1234:5678::abcd:ef01", 444),
-            "2004:0db8:1234:5678::abcd:ef01",
+            "[2004:0db8:1234:5678::abcd:ef01]:444",
         ),
         (
             # Ensure ports are handled properly
@@ -213,7 +213,7 @@ def test_allows_public_ranges(
             "http://[2004:0db8:1234:5678::abcd:ef01]:444/",
             "2004:0db8:1234:5678::abcd:ef01",
             ("2004:db8:1234:5678::abcd:ef01", 444),
-            "2004:0db8:1234:5678::abcd:ef01",
+            "[2004:0db8:1234:5678::abcd:ef01]:444",
         ),
         (
             # Ensure ports are handled properly
@@ -221,7 +221,7 @@ def test_allows_public_ranges(
             "http://127.0.0.1:444/",
             "127.0.0.1",
             ("127.0.0.1", 444),
-            "127.0.0.1",
+            "127.0.0.1:444",
         ),
         (
             # Ensure ports are handled properly
@@ -229,7 +229,7 @@ def test_allows_public_ranges(
             "http://example.com:444/",
             "127.0.0.1",
             ("127.0.0.1", 444),
-            "example.com",
+            "example.com:444",
         ),
         (
             # Ensure unicode URLs are encoded to IDNA
@@ -273,9 +273,9 @@ def test_url_handling(
     # especially not a URL hostname.
     # We should always only resolve once as otherwise we risk race-condition
     # vulnerabilities, or bypass through malicious DNS round-robin.
-    assert conn_addr == (
-        expected_sock_addr
-    ), "Should have passed the mocked getaddrinfo() IP address"
+    assert conn_addr == (expected_sock_addr), (
+        "Should have passed the mocked getaddrinfo() IP address"
+    )
 
 
 @pytest.mark.parametrize(
@@ -445,11 +445,65 @@ def test_pass_headers_reference():
     assert response.request.method == "GET"
     assert response.request.url == url
     assert "Host" not in input_headers, "Shouldn't have mutated the input headers"
-    assert response.request.headers.get("Host") == "dummy.local"
-    assert (
-        response.request.headers.get("foo") == "bar"
-    ), "Should have preserved the original headers"
+    assert response.request.headers.get("Host") == f"dummy.local:{port}"
+    assert response.request.headers.get("foo") == "bar", (
+        "Should have preserved the original headers"
+    )
 
+
+@pytest.mark.fake_resolver(enabled=False)
+@pytest.mark.allow_hosts(["127.0.0.1"])  # We need to be able to create the dummy server
+@mock.patch("urllib3.util.connection.create_connection")
+@pytest.mark.parametrize(
+    ("_case", "input_url", "expected_host_header"),
+    [
+        (
+            "No port provided -> shouldn't set any port in Host header",
+            "http://dummy-http.test/",
+            "dummy-http.test",
+        ),
+        (
+            "Default HTTP port provided -> should set the port in Host header",
+            "http://dummy-http.test:80/",
+            "dummy-http.test:80",
+        ),
+        (
+            "Non-Default port provided",
+            "http://dummy-http.test:8888/",
+            "dummy-http.test:8888",
+        ),
+        (
+            "Using IP address + custom port, should set the correct Host header",
+            "http://8.8.8.0:8888/",
+            "8.8.8.0:8888",
+        ),
+    ],
+)
+def test_sets_port_number_in_host_header(
+    mocked_create_connection: mock.MagicMock,
+    _case: str,
+    input_url: str,
+    expected_host_header: str,
+):
+    """
+    Ensure the ``Host`` header includes the port number when a port is
+    explicitly provided.
+    """
+
+    dummy_server = InsecureHTTPTestServer()
+
+    http_manager = SSRFFilter.clone()
+    http_manager.config.ip_filter_allow_loopback_ips = True
+
+    with dummy_server:
+        with mock_getaddrinfo("127.0.0.1"):
+            mocked_create_connection.return_value = dummy_server.create_client_socket()
+            response = http_manager.send_request("GET", input_url)
+            mocked_create_connection.assert_called_once()
+
+    assert response.request.method == "GET"
+    assert response.request.url == input_url
+    assert response.request.headers.get("Host") == expected_host_header
 
 
 @pytest.mark.fake_resolver(enabled=False)
@@ -497,6 +551,8 @@ def test_headers_are_case_insensitive(
         with mock_getaddrinfo(host):
             response = http_manager.send_request("GET", url, headers=input_headers)
 
+    expected_headers["Host"] += f":{port}"
+
     actual_headers = response.request.headers
     assert actual_headers == expected_headers
 
@@ -529,7 +585,7 @@ def test_http_redirect_should_not_affect_request_headers():
             )
 
             # A new Host header value should be set on redirect.
-            assert response.request.headers.get("Host") == "redirected.local"
+            assert response.request.headers.get("Host") == f"redirected.local:{port}"
 
             # Ensure the Authorization header is dropped when redirected.
             # This is dictated by:

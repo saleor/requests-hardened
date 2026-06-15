@@ -41,8 +41,22 @@ class IPFilterAdapter(HTTPAdapter):
         else:
             request.headers = CaseInsensitiveDict()
 
+        # Retrieves the hostname or IP to resolve
+        original_hostname = host_params["host"]
+        host_header = original_hostname
+
+        # If the hostname is an IPv6 value, then we wrap the ``Host`` header
+        # with brackets (e.g., ``::1`` -> ``[::1]``)
+        # We only check if a colon (':') is present in the string as means it's
+        # an IPv6 address as hostnames cannot contain colons
+        if ":" in host_header:
+            host_header = f"[{host_header}]"
+
+        if (port := host_params["port"]) is not None:
+            host_header += f":{port}"
+
         # Adds the original URL hostname as the 'Host' header.
-        original_host = request.headers["Host"] = host_params["host"]
+        request.headers["Host"] = host_header
 
         # Set the original hostname for certificate validation otherwise
         # urllib3 will try to match the pinned resolved IP address against the
@@ -51,19 +65,24 @@ class IPFilterAdapter(HTTPAdapter):
         # Note: assert_hostname and server_hostname cannot be passed
         #       when using insecure HTTP (http://) as it's not a valid argument for
         #       `urllib3.connectionpool.HTTPConnectionPool`.
+        #
+        # Note: SAN (Subject Alternative Name), and SNI do not use ports as
+        #       they define the hostname values as a DNS hostname.
+        #       For SNI, see: https://datatracker.ietf.org/doc/html/rfc6066#section-3
+        #       For SAN, see: https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.6
         if self._is_https_proto is True:
             # For non-TLS SNI servers.
-            pool_kwargs["assert_hostname"] = original_host  # type: ignore[typeddict-unknown-key] # Valid parameter for urllib3.connectionpool.HTTPSConnectionPool
+            pool_kwargs["assert_hostname"] = original_hostname  # type: ignore[typeddict-unknown-key] # Valid parameter for urllib3.connectionpool.HTTPSConnectionPool
 
             # Support TLS servers with SNI callbacks.
             if self._tls_sni_support is True:
-                pool_kwargs["server_hostname"] = original_host  # type: ignore[typeddict-unknown-key] # Valid parameter for urllib3.connectionpool.HTTPSConnectionPool
+                pool_kwargs["server_hostname"] = original_hostname  # type: ignore[typeddict-unknown-key] # Valid parameter for urllib3.connectionpool.HTTPSConnectionPool
 
         # Override the connection hostname to the resolved IP address,
         # and reject if it's a private IP.
         host_params["host"] = filter_host(
-            original_host,
-            host_params["port"],
+            original_hostname,
+            port,
             allow_loopback=self._allow_loopback,
         )
         return host_params, pool_kwargs
