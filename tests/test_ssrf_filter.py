@@ -473,9 +473,19 @@ def test_pass_headers_reference():
             "dummy-http.test:8888",
         ),
         (
-            "Using IP address + custom port, should set the correct Host header",
+            "Using IPv4 address + custom port, should set the correct Host header",
             "http://8.8.8.0:8888/",
             "8.8.8.0:8888",
+        ),
+        (
+            "Using IPv6 address + custom port, should set the correct Host header",
+            "http://[2606:4700:10::6814:179a]:8888/",
+            "[2606:4700:10::6814:179a]:8888",
+        ),
+        (
+            "Using compressed IPv6 address + custom port, should set the correct Host header",
+            "http://[::1]:8888/",
+            "[::1]:8888",
         ),
     ],
 )
