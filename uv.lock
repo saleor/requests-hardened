@@ -608,7 +608,7 @@ socks = [
 
 [[package]]
 name = "requests-hardened"
-version = "1.3.0"
+version = "1.3.0b1"
 source = { editable = "." }
 dependencies = [
     { name = "requests" },
