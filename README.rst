@@ -52,8 +52,10 @@ Proxy Support
 
 The SSRF IP filter's behavior with proxies are as follows:
 
-- **Proxy's IP Address:** does not block private and loopback IP addresses (no filtering).
-  Instead, the filter assumes that the proxy URL is never tainted with untrusted
+- **Proxy's IP Address:** no IP filtering is performed against proxy URLs,
+  therefore private IP addresses, loopback addresses, and other reserved
+  IP ranges (such as `100.64.0.0/10`) are not blocked when provided as the
+  proxy URL. The filter assumes that the proxy URL is never tainted with untrusted
   user input.
 - **Target IP Address (Tunneled HTTP Requests):** by default, the tunneled requests are
   filtered for potential SSRF attacks.
@@ -83,13 +85,14 @@ Example Usage:
       )
   )
 
-  # List of proxies
+  # List of proxies (no IP filtering as described above under 'Proxy's IP Address')
   proxies = {
     "https": "socks5://127.0.0.1:8888",
     "http": "socks5://127.0.0.1:8888",
   }
 
-  # Sends the HTTP request using the proxy
+  # Sends the HTTP request using the proxy (IP filtering is performed against
+  # the `https://example.com` URL)
   resp = http_manager.send_request("GET", "https://example.com", proxies=proxies)
   print(resp)
 
