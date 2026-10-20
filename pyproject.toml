@@ -58,6 +58,11 @@ dev = [
     "requests[socks]>=2.32.3,<3.0.0",
 ]
 
+[tool.uv.exclude-newer-package]
+# To customize on a per-package basis, for example you can do this:
+# django = "2026-04-07T14:30:00Z"
+certifi = "2026-10-20T02:25:00Z"
+
 [project.urls]
 Homepage = "https://github.com/saleor/requests-hardened/"
 Source = "https://github.com/saleor/requests-hardened/"
