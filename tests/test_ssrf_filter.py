@@ -625,3 +625,38 @@ def test_http_redirect_should_filter_ip_address():
             # Should raise on the HTTP redirect
             with pytest.raises(InvalidIPAddress, match="10.0.0.1"):
                 http_manager.send_request("GET", url)
+
+
+@pytest.mark.allow_hosts(["127.0.0.1"])  # We need to be able to create the dummy server
+@pytest.mark.parametrize(
+    ("_case", "input_headers"),
+    [
+        ("No caller-provided headers", {}),
+        ("Caller-provided Host", {"HoST": "foo.local"}),
+        ("Caller-provided headers", {"AUTHORIZATION": "Bearer Foo"}),
+    ],
+)
+def test_host_header_is_sent_first(_case: str, input_headers: Mapping[str, str]):
+    """
+    Ensure the 'Host' header is the first header of the request.
+
+    RFC 7230 (section 3.2.2) recommends sending header fields that contain
+    control data, such as 'Host', first. Some edge networks (e.g., Cloudflare)
+    treat a trailing 'Host' as a request-smuggling signal and reject the
+    request with a challenge or a 403.
+    """
+
+    dummy_server = InsecureHTTPTestServer()
+
+    http_manager = SSRFFilter.clone()
+    http_manager.config.ip_filter_allow_loopback_ips = True
+
+    with dummy_server as [host, port]:
+        url = f"http://dummy.local:{port}/"
+        with mock_getaddrinfo(host):
+            response = http_manager.send_request("GET", url, headers=input_headers)
+
+    header_names = list(response.request.headers)
+    assert header_names[0].lower() == "host", (
+        f"'Host' should be the first header, got: {header_names}"
+    )

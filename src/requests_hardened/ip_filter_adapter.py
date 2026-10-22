@@ -33,14 +33,6 @@ class IPFilterAdapter(HTTPAdapter):
             request, verify, cert
         )
 
-        # Copy headers before mutating them as they may be a global variable used by
-        # subsequent requests.
-        # e.g., https://github.com/lepture/authlib/blob/a7d68b4c3b8a3a7fe0b62943b5228669f2f3dfec/authlib/oauth2/client.py#L205-L206
-        if request.headers:
-            request.headers = CaseInsensitiveDict(request.headers)
-        else:
-            request.headers = CaseInsensitiveDict()
-
         # Retrieves the hostname or IP to resolve
         original_hostname = host_params["host"]
         host_header = original_hostname
@@ -55,8 +47,30 @@ class IPFilterAdapter(HTTPAdapter):
         if (port := host_params["port"]) is not None:
             host_header += f":{port}"
 
+        # Copy headers before mutating them as they may be a global variable used by
+        # subsequent requests.
+        # e.g., https://github.com/lepture/authlib/blob/a7d68b4c3b8a3a7fe0b62943b5228669f2f3dfec/authlib/oauth2/client.py#L205-L206
+        #
+        # The 'Host' header is inserted first so that it is sent first on the wire.
+        # RFC 7230 (section 3.2.2) recommends sending header fields that contain
+        # control data, such as 'Host', first. Assigning it onto the existing
+        # headers instead would place it last, because ``requests`` merges the
+        # session defaults before any header it does not already know about.
+        # Some edge networks (e.g., Cloudflare) treat a trailing 'Host' as a
+        # request-smuggling signal and answer with a challenge or a 403.
+        new_headers: CaseInsensitiveDict = CaseInsensitiveDict()
+
         # Adds the original URL hostname as the 'Host' header.
-        request.headers["Host"] = host_header
+        new_headers["Host"] = host_header
+
+        if request.headers:
+            for header_name, header_value in request.headers.items():
+                # Skip any caller-provided 'Host': it is overridden above, and
+                # re-assigning it here would not change its (first) position.
+                if header_name.lower() != "host":
+                    new_headers[header_name] = header_value
+
+        request.headers = new_headers
 
         # Set the original hostname for certificate validation otherwise
         # urllib3 will try to match the pinned resolved IP address against the
